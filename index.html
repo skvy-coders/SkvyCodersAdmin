@@ -95,18 +95,6 @@
             width: auto;
             margin-right: 8px;
         }
-        .forgot-password {
-            text-align: center;
-            margin-top: 16px;
-        }
-        .forgot-password a {
-            color: #0366d6;
-            text-decoration: none;
-            font-size: 14px;
-        }
-        .forgot-password a:hover {
-            text-decoration: underline;
-        }
     </style>
 </head>
 <body>
@@ -133,10 +121,6 @@
         </div>
         
         <button id="loginBtn">Sign In</button>
-        
-        <div class="forgot-password">
-            <a href="#">Forgot password?</a>
-        </div>
         
         <div id="status" class="status"></div>
         
@@ -198,8 +182,8 @@
                 // Replace this with your actual authentication logic
                 // For demo purposes only - in a real app, never hardcode credentials
                 const validCredentials = {
-                    'admin': 'password123',
-                    'user': 'user123'
+                    'praveen_orsu': 'Praveen@Orsu',
+                    'madhu_chitturi': 'Madhu@2002'
                 };
                 
                 return validCredentials[username] === password;
