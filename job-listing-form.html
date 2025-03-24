@@ -83,23 +83,6 @@
             max-height: 300px;
             overflow-y: auto;
         }
-        .id-info {
-            background-color: #e9ecef;
-            padding: 10px;
-            border-radius: 4px;
-            margin-bottom: 16px;
-            display: none;
-        }
-        .id-info strong {
-            font-weight: 600;
-        }
-        .load-button {
-            background-color: #0366d6;
-            margin-bottom: 16px;
-        }
-        .load-button:hover {
-            background-color: #0358b8;
-        }
     </style>
 </head>
 <body>
@@ -107,8 +90,32 @@
         <h1>Add Job Listing to GitHub JSON</h1>
         <button id="logoutBtn" style="background-color: #d73a49; margin-top: 16px;">Logout</button>
         
-        <!-- Job listing form fields -->
+        <div class="form-group">
+            <label for="repoOwner">Repository Owner (Username)</label>
+            <input type="text" id="repoOwner" placeholder="e.g., yourusername" required>
+        </div>
         
+        <div class="form-group">
+            <label for="repoName">Repository Name</label>
+            <input type="text" id="repoName" placeholder="e.g., my-repository" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="filePath">JSON File Path (relative to repo root)</label>
+            <input type="text" id="filePath" placeholder="e.g., data/jobs.json" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="branchName">Branch Name</label>
+            <input type="text" id="branchName" value="main" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="token">GitHub Personal Access Token (with repo scope)</label>
+            <input type="password" id="token" placeholder="ghp_xxxxxxxxxxxx" required>
+        </div>
+        
+        <button id="submitBtn">Submit to GitHub</button>
     </div>
 
     <script>
