@@ -425,6 +425,28 @@
                 statusDiv.className = `status ${type}`;
                 statusDiv.style.display = 'block';
             }
+            <button id="logoutBtn" style="background-color: #d73a49; margin-top: 16px;">Logout</button>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const logoutBtn = document.getElementById('logoutBtn');
+        
+        // Logout button functionality
+        logoutBtn.addEventListener('click', function() {
+            localStorage.removeItem('loggedIn');
+            localStorage.removeItem('username');
+            sessionStorage.removeItem('loggedIn');
+            sessionStorage.removeItem('username');
+            window.location.href = 'index.html';
+        });
+
+        // Prevent accessing job-listing-form.html after logout
+        if (!localStorage.getItem('loggedIn') && !sessionStorage.getItem('loggedIn')) {
+            window.location.href = 'index.html';
+        }
+    });
+</script>
+
         });
     </script>
 </body>
