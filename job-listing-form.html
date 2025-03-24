@@ -105,7 +105,7 @@
 <body>
     <div class="container">
         <h1>Add Job Listing to GitHub JSON</h1>
-        
+        <button id="logoutBtn" style="background-color: #d73a49; margin-top: 16px;">Logout</button>
         <div class="form-group">
             <label for="repoOwner">Repository Owner (Username)</label>
             <input type="text" id="repoOwner" placeholder="e.g., yourusername" required>
@@ -425,9 +425,7 @@
                 statusDiv.className = `status ${type}`;
                 statusDiv.style.display = 'block';
             }
-            <button id="logoutBtn" style="background-color: #d73a49; margin-top: 16px;">Logout</button>
-
-<script>
+            
     document.addEventListener('DOMContentLoaded', function() {
         const logoutBtn = document.getElementById('logoutBtn');
         
@@ -444,8 +442,8 @@
         if (!localStorage.getItem('loggedIn') && !sessionStorage.getItem('loggedIn')) {
             window.location.href = 'index.html';
         }
-    });
-</script>
+    }
+
 
         });
     </script>
