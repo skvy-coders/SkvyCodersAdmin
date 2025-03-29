@@ -72,6 +72,10 @@
             background-color: #d1ecf1;
             color: #0c5460;
         }
+        .warning {
+            background-color: #fff3cd;
+            color: #856404;
+        }
         #responseArea {
             margin-top: 20px;
             background-color: #f6f8fa;
@@ -110,12 +114,41 @@
         .logout-btn:hover {
             background-color: #c53030;
         }
+        #imageUploadArea {
+            display: none;
+            margin-top: 16px;
+            padding: 16px;
+            background-color: #fff3cd;
+            border-radius: 4px;
+        }
+        #imageUploadForm {
+            margin-top: 12px;
+        }
+        .check-image-button {
+            background-color: #6c757d;
+            margin-left: 8px;
+        }
+        .check-image-button:hover {
+            background-color: #5a6268;
+        }
+        .image-input-wrapper {
+            display: flex;
+            align-items: center;
+        }
+        #imagePreview {
+            max-width: 150px;
+            max-height: 150px;
+            margin-top: 10px;
+            display: none;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
     </style>
 </head>
 <body>
     <button id="logoutBtn" class="logout-btn">Logout</button>
     <div id="status" class="status"></div>
-        <div id="responseArea"></div>
+    <div id="responseArea"></div>
     <div class="container">
         <h1>Add Job Listing to GitHub JSON</h1>
         
@@ -161,7 +194,21 @@
         
         <div class="form-group">
             <label for="image">Image Path</label>
-            <input type="text" id="image" placeholder="e.g., images/company.png" required>
+            <div class="image-input-wrapper">
+                <input type="text" id="image" placeholder="e.g., images/company.png" required>
+                <button id="checkImageBtn" class="check-image-button">Check Image</button>
+            </div>
+            <small>Image should be in the repository's images folder.</small>
+            <img id="imagePreview" alt="Image Preview">
+        </div>
+        
+        <div id="imageUploadArea">
+            <h3>Image Not Found</h3>
+            <p>The specified image does not exist in the repository. Please upload it:</p>
+            <form id="imageUploadForm">
+                <input type="file" id="imageFile" accept="image/*">
+                <button type="button" id="uploadImageBtn">Upload Image</button>
+            </form>
         </div>
         
         <div class="form-group">
@@ -195,20 +242,22 @@
         </div>
         
         <button id="submitBtn">Submit to GitHub</button>
-        
-        
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const submitBtn = document.getElementById('submitBtn');
             const loadDataBtn = document.getElementById('loadDataBtn');
+            const checkImageBtn = document.getElementById('checkImageBtn');
+            const uploadImageBtn = document.getElementById('uploadImageBtn');
             const statusDiv = document.getElementById('status');
             const responseArea = document.getElementById('responseArea');
             const idInfoDiv = document.getElementById('idInfo');
             const lastJobIdSpan = document.getElementById('lastJobId');
             const nextJobIdSpan = document.getElementById('nextJobId');
             const logoutBtn = document.getElementById('logoutBtn');
+            const imageUploadArea = document.getElementById('imageUploadArea');
+            const imagePreview = document.getElementById('imagePreview');
             
             // Logout button functionality
             logoutBtn.addEventListener('click', function() {
@@ -223,7 +272,6 @@
             if (!localStorage.getItem('loggedIn') && !sessionStorage.getItem('loggedIn')) {
                 window.location.href = 'index.html';
             }
-
             
             // Set today's date as default for posting date
             document.getElementById('postingDate').valueAsDate = new Date();
@@ -231,8 +279,147 @@
             // Load data button click handler
             loadDataBtn.addEventListener('click', loadExistingData);
             
+            // Check image button click handler
+            checkImageBtn.addEventListener('click', checkImageExists);
+            
+            // Upload image button click handler
+            uploadImageBtn.addEventListener('click', uploadImage);
+            
             // Submit button click handler
             submitBtn.addEventListener('click', handleSubmit);
+            
+            // Check if image exists in the repository
+            async function checkImageExists() {
+                const repoOwner = document.getElementById('repoOwner').value;
+                const repoName = document.getElementById('repoName').value;
+                const branchName = document.getElementById('branchName').value;
+                const token = document.getElementById('token').value;
+                const imagePath = document.getElementById('image').value.trim();
+                
+                // Validate required fields
+                if (!repoOwner || !repoName || !branchName || !token || !imagePath) {
+                    showStatus('Please fill in all GitHub repository fields and image path.', 'error');
+                    return;
+                }
+                
+                showStatus('Checking if image exists...', 'info');
+                imageUploadArea.style.display = 'none';
+                imagePreview.style.display = 'none';
+                
+                try {
+                    const imageResponse = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/${imagePath}?ref=${branchName}`, {
+                        headers: {
+                            'Authorization': `token ${token}`,
+                            'Accept': 'application/vnd.github.v3+json'
+                        }
+                    });
+                    
+                    if (imageResponse.status === 200) {
+                        const imageData = await imageResponse.json();
+                        
+                        // Check if it's actually an image file
+                        if (imageData.type === 'file' && imageData.name.match(/\.(jpe?g|png|gif|svg|webp)$/i)) {
+                            showStatus('Image found in repository!', 'success');
+                            
+                            // Show image preview
+                            const imageUrl = `https://raw.githubusercontent.com/${repoOwner}/${repoName}/${branchName}/${imagePath}`;
+                            imagePreview.src = imageUrl;
+                            imagePreview.style.display = 'block';
+                        } else {
+                            showStatus('The path exists but is not an image file.', 'warning');
+                            imageUploadArea.style.display = 'block';
+                        }
+                    } else if (imageResponse.status === 404) {
+                        showStatus('Image not found in repository.', 'warning');
+                        imageUploadArea.style.display = 'block';
+                    } else {
+                        throw new Error(`Failed to check image: ${imageResponse.statusText}`);
+                    }
+                } catch (error) {
+                    showStatus(`Error checking image: ${error.message}`, 'error');
+                    console.error('Error details:', error);
+                }
+            }
+            
+            // Upload image to the repository
+            async function uploadImage() {
+                const repoOwner = document.getElementById('repoOwner').value;
+                const repoName = document.getElementById('repoName').value;
+                const branchName = document.getElementById('branchName').value;
+                const token = document.getElementById('token').value;
+                const imagePath = document.getElementById('image').value.trim();
+                const imageFile = document.getElementById('imageFile').files[0];
+                
+                // Validate required fields
+                if (!repoOwner || !repoName || !branchName || !token || !imagePath) {
+                    showStatus('Please fill in all GitHub repository fields and image path.', 'error');
+                    return;
+                }
+                
+                if (!imageFile) {
+                    showStatus('Please select an image file to upload.', 'error');
+                    return;
+                }
+                
+                showStatus('Uploading image...', 'info');
+                
+                try {
+                    // Read file as base64
+                    const reader = new FileReader();
+                    reader.readAsDataURL(imageFile);
+                    
+                    reader.onload = async function() {
+                        try {
+                            // Get base64 content (remove data:image/png;base64, prefix)
+                            const base64Content = reader.result.split(',')[1];
+                            
+                            // Prepare the upload payload
+                            const payload = {
+                                message: `Add company image for job listing`,
+                                content: base64Content,
+                                branch: branchName
+                            };
+                            
+                            // Create or update the file
+                            const uploadResponse = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/${imagePath}`, {
+                                method: 'PUT',
+                                headers: {
+                                    'Authorization': `token ${token}`,
+                                    'Accept': 'application/vnd.github.v3+json',
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify(payload)
+                            });
+                            
+                            const uploadData = await uploadResponse.json();
+                            
+                            if (uploadResponse.status === 200 || uploadResponse.status === 201) {
+                                showStatus('Image successfully uploaded to GitHub!', 'success');
+                                
+                                // Show image preview
+                                const imageUrl = `https://raw.githubusercontent.com/${repoOwner}/${repoName}/${branchName}/${imagePath}`;
+                                imagePreview.src = imageUrl;
+                                imagePreview.style.display = 'block';
+                                
+                                // Hide upload area
+                                imageUploadArea.style.display = 'none';
+                            } else {
+                                throw new Error(uploadData.message || 'Failed to upload image');
+                            }
+                        } catch (error) {
+                            showStatus(`Error uploading image: ${error.message}`, 'error');
+                            console.error('Error details:', error);
+                        }
+                    };
+                    
+                    reader.onerror = function() {
+                        showStatus('Error reading the image file.', 'error');
+                    };
+                } catch (error) {
+                    showStatus(`Error uploading image: ${error.message}`, 'error');
+                    console.error('Error details:', error);
+                }
+            }
             
             async function loadExistingData() {
                 // Get repository info
@@ -324,6 +511,7 @@
                 const filePath = document.getElementById('filePath').value;
                 const branchName = document.getElementById('branchName').value;
                 const token = document.getElementById('token').value;
+                const imagePath = document.getElementById('image').value.trim();
                 
                 // Validate required fields
                 if (!repoOwner || !repoName || !filePath || !branchName || !token) {
@@ -334,7 +522,7 @@
                 // Get job listing data
                 const jobData = {
                     id: document.getElementById('id').value,
-                    image: document.getElementById('image').value,
+                    image: imagePath,
                     company: document.getElementById('company').value,
                     title: document.getElementById('title').value,
                     description: document.getElementById('description').value,
@@ -351,9 +539,26 @@
                     }
                 }
                 
-                showStatus('Fetching current file data...', 'info');
-                
+                // Check if image exists before submitting
                 try {
+                    showStatus('Checking if image exists before submitting...', 'info');
+                    
+                    const imageResponse = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/${imagePath}?ref=${branchName}`, {
+                        headers: {
+                            'Authorization': `token ${token}`,
+                            'Accept': 'application/vnd.github.v3+json'
+                        }
+                    });
+                    
+                    if (imageResponse.status !== 200) {
+                        showStatus('The specified image does not exist in the repository. Please upload it first.', 'warning');
+                        imageUploadArea.style.display = 'block';
+                        return; // Stop submission
+                    }
+                    
+                    // If image exists, continue with submission
+                    showStatus('Image verified. Fetching current file data...', 'info');
+                    
                     // First, try to get the current file content
                     let currentContent = [];
                     let sha = null;
@@ -439,6 +644,7 @@
                         document.getElementById('fullDescription').value = '';
                         document.getElementById('applyLink').value = '';
                         document.getElementById('postingDate').valueAsDate = new Date();
+                        imagePreview.style.display = 'none';
                     } else {
                         throw new Error(updateData.message || 'Failed to update file');
                     }
