@@ -726,10 +726,18 @@
                     showStatus('Updating file in GitHub repository...', 'info');
                     
                     // Prepare the update payload
+                    // UTF-8 safe base64 encoding function
+                    function utf8ToBase64(str) {
+                        return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (match, p1) => {
+                            return String.fromCharCode('0x' + p1);
+                        }));
+                    }
+                    
+                    // Then in your payload:
                     const payload = {
                         message: `Add new job listing for ${jobData.company} - ${jobData.title}`,
-                        content: btoa(JSON.stringify(currentContent, null, 2)), // Convert to base64
-                        branch: images
+                        content: utf8ToBase64(JSON.stringify(currentContent, null, 2)), // Convert to base64 safely
+                        branch: branchName // Fix the branch name variable
                     };
                     
                     if (sha) {
