@@ -355,8 +355,8 @@
             
             // Set default repository information
             document.getElementById('repoOwner').value = 'skvy-coders';
-            document.getElementById('repoName').value = 'skvy-database';
-            document.getElementById('filePath').value = 'data/jobs.json';
+            document.getElementById('repoName').value = 'SkvyCoders';
+            document.getElementById('filePath').value = 'jobs.json';
             
             // Display username
             const username = localStorage.getItem('username') || sessionStorage.getItem('username');
@@ -729,7 +729,7 @@
                     const payload = {
                         message: `Add new job listing for ${jobData.company} - ${jobData.title}`,
                         content: btoa(JSON.stringify(currentContent, null, 2)), // Convert to base64
-                        branch: branchName
+                        branch: images
                     };
                     
                     if (sha) {
