@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gadget Management System</title>
     <style>
+        /* CSS styles remain unchanged */
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
             max-width: 1000px;
@@ -349,85 +350,62 @@
     <script>
         let specifications = [];
 
-        // Base64 encoding function that handles Unicode properly
+        // Fixed Base64 functions that use built-in browser methods
         function safeBase64Encode(str) {
-            // First, create a Uint8Array from the string as UTF-8
-            const encoder = new TextEncoder();
-            const data = encoder.encode(str);
-            
-            // Convert the binary data to base64
-            let base64 = '';
-            const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
-            let i = 0;
-            
-            // Process every 3 bytes (24 bits) at a time
-            while (i < data.length) {
-                const byte1 = data[i++] || 0;
-                const byte2 = data[i++] || 0;
-                const byte3 = data[i++] || 0;
+            // Use built-in btoa but handle Unicode properly
+            try {
+                // First encode the string as UTF-8
+                const utf8Bytes = new TextEncoder().encode(str);
                 
-                // Convert three bytes into four base64 characters
-                const triplet = (byte1 << 16) | (byte2 << 8) | byte3;
+                // Convert UTF-8 bytes to binary string (required for btoa)
+                let binaryString = '';
+                utf8Bytes.forEach(byte => {
+                    binaryString += String.fromCharCode(byte);
+                });
                 
-                base64 += charset[(triplet >> 18) & 0x3F];
-                base64 += charset[(triplet >> 12) & 0x3F];
-                // Add padding if needed
-                base64 += (i > data.length - 2) ? (i > data.length - 1 ? '=' : charset[(triplet >> 6) & 0x3F]) : charset[(triplet >> 6) & 0x3F];
-                base64 += (i > data.length - 3) ? '=' : charset[triplet & 0x3F];
+                // Use browser's btoa function for base64 encoding
+                return btoa(binaryString);
+            } catch (e) {
+                console.error("Base64 encoding error:", e);
+                
+                // Fallback method for older browsers
+                const base64chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+                let result = '';
+                const utf8Bytes = new TextEncoder().encode(str);
+                
+                for (let i = 0; i < utf8Bytes.length; i += 3) {
+                    const chunk = (utf8Bytes[i] << 16) | 
+                                 ((i + 1 < utf8Bytes.length) ? utf8Bytes[i + 1] << 8 : 0) | 
+                                 ((i + 2 < utf8Bytes.length) ? utf8Bytes[i + 2] : 0);
+                    
+                    result += base64chars[(chunk >> 18) & 63];
+                    result += base64chars[(chunk >> 12) & 63];
+                    result += (i + 1 < utf8Bytes.length) ? base64chars[(chunk >> 6) & 63] : '=';
+                    result += (i + 2 < utf8Bytes.length) ? base64chars[chunk & 63] : '=';
+                }
+                
+                return result;
             }
-            
-            return base64;
         }
         
-        // Base64 decoding function that handles Unicode properly
         function safeBase64Decode(base64) {
-            // First replace any non-base64 characters and fix padding
-            base64 = base64.replace(/[^A-Za-z0-9\+\/]/g, '');
-            
-            // Calculate padding
-            const padding = base64.length % 4;
-            if (padding) {
-                if (padding === 1) {
-                    throw new Error('Invalid base64 input');
-                }
-                base64 += '='.repeat(4 - padding);
-            }
-            
-            // Compute the actual length of the decoded data
-            const length = (base64.length / 4) * 3;
-            let actualLength = length;
-            if (base64.endsWith('==')) actualLength -= 2;
-            else if (base64.endsWith('=')) actualLength -= 1;
-            
-            // Create a Uint8Array to hold the decoded data
-            const bytes = new Uint8Array(actualLength);
-            
-            // Map base64 characters to their values
-            const charset = {};
-            'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'.split('').forEach((c, i) => {
-                charset[c] = i;
-            });
-            
-            // Decode every 4 characters into 3 bytes
-            let byteIndex = 0;
-            for (let i = 0; i < base64.length; i += 4) {
-                // Convert four base64 characters back to 24 bits
-                const sextet1 = charset[base64[i] || 'A'];
-                const sextet2 = charset[base64[i + 1] || 'A'];
-                const sextet3 = charset[base64[i + 2] || 'A'];
-                const sextet4 = charset[base64[i + 3] || 'A'];
-                
-                const triplet = (sextet1 << 18) | (sextet2 << 12) | (sextet3 << 6) | sextet4;
-                
-                if (byteIndex < actualLength) bytes[byteIndex++] = (triplet >> 16) & 0xFF;
-                if (byteIndex < actualLength) bytes[byteIndex++] = (triplet >> 8) & 0xFF;
-                if (byteIndex < actualLength) bytes[byteIndex++] = triplet & 0xFF;
-            }
-            
-            // Convert the bytes to a string
-            const decoder = new TextDecoder();
-            return decoder.decode(bytes);
+        if (!base64 || typeof base64 !== 'string') {
+            throw new Error("Invalid input: not a string.");
         }
+
+        base64 = base64.replace(/[^A-Za-z0-9\+\/=]/g, '');
+        const padding = base64.length % 4;
+        if (padding === 1) {
+            throw new Error("Invalid base64 input length.");
+        }
+        base64 += "=".repeat((4 - base64.length % 4) % 4);
+
+        const raw = atob(base64);
+        const encoder = new TextEncoder();
+        const bytes = new Uint8Array([...raw].map(c => c.charCodeAt(0)));
+        const decoder = new TextDecoder();
+        return decoder.decode(bytes);
+    }
         
         document.addEventListener('DOMContentLoaded', function() {
             const submitBtn = document.getElementById('submitBtn');
@@ -518,75 +496,83 @@
             
             // Upload image to the repository
             async function uploadImage() {
-                const repoOwner = document.getElementById('repoOwner').value;
-                const repoName = document.getElementById('repoName').value;
-                const branchName = document.getElementById('branchName').value;
-                const token = document.getElementById('token').value;
-                const imagePath = document.getElementById('image').value.trim();
-                const imageFile = document.getElementById('imageFile').files[0];
-                
-                if (!repoOwner || !repoName || !branchName || !token || !imagePath) {
-                    showStatus('Please fill in all GitHub repository fields and image path.', 'error');
+        const repoOwner = document.getElementById('repoOwner').value;
+        const repoName = document.getElementById('repoName').value;
+        const branchName = document.getElementById('branchName').value;
+        const token = document.getElementById('token').value;
+        const imagePath = document.getElementById('image').value.trim();
+        const imageFile = document.getElementById('imageFile').files[0];
+
+        if (!repoOwner || !repoName || !branchName || !token || !imagePath) {
+            showStatus('Please fill in all GitHub repository fields and image path.', 'error');
+            return;
+        }
+
+        if (!imageFile) {
+            showStatus('Please select an image file to upload.', 'error');
+            return;
+        }
+
+        showStatus('Uploading image...', 'info');
+
+        try {
+            const reader = new FileReader();
+
+            reader.onload = async function () {
+                if (!reader.result) {
+                    showStatus('Error: Could not read image file.', 'error');
                     return;
                 }
-                
-                if (!imageFile) {
-                    showStatus('Please select an image file to upload.', 'error');
-                    return;
-                }
-                
-                showStatus('Uploading image...', 'info');
-                
+
                 try {
-                    const reader = new FileReader();
-                    reader.readAsDataURL(imageFile);
-                    
-                    reader.onload = async function() {
-                        try {
-                            const base64Content = reader.result.split(',')[1];
-                            
-                            const payload = {
-                                message: `Add product image for ${document.getElementById('name').value || 'gadget'}`,
-                                content: base64Content,
-                                branch: branchName
-                            };
-                            
-                            const uploadResponse = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/${imagePath}`, {
-                                method: 'PUT',
-                                headers: {
-                                    'Authorization': `token ${token}`,
-                                    'Accept': 'application/vnd.github.v3+json',
-                                    'Content-Type': 'application/json'
-                                },
-                                body: JSON.stringify(payload)
-                            });
-                            
-                            const uploadData = await uploadResponse.json();
-                            
-                            if (uploadResponse.status === 200 || uploadResponse.status === 201) {
-                                showStatus('Image successfully uploaded to GitHub!', 'success');
-                                
-                                const imageUrl = `https://raw.githubusercontent.com/${repoOwner}/${repoName}/${branchName}/${imagePath}`;
-                                imagePreview.src = imageUrl;
-                                imagePreview.style.display = 'block';
-                                imageUploadArea.style.display = 'none';
-                            } else {
-                                throw new Error(uploadData.message || 'Failed to upload image');
-                            }
-                        } catch (error) {
-                            showStatus(`Error uploading image: ${error.message}`, 'error');
-                            console.error('Error details:', error);
-                        }
+                    const base64Content = reader.result.split(',')[1];
+                    if (!/^[A-Za-z0-9+/=\r\n]+$/.test(base64Content)) {
+                        throw new Error('Generated content is not valid Base64');
+                    }
+
+                    const payload = {
+                        message: `Add product image for ${document.getElementById('name').value || 'gadget'}`,
+                        content: base64Content,
+                        branch: branchName
                     };
-                    
-                    reader.onerror = function() {
-                        showStatus('Error reading the image file.', 'error');
-                    };
+
+                    const uploadResponse = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/${imagePath}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `token ${token}`,
+                            'Accept': 'application/vnd.github.v3+json',
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(payload)
+                    });
+
+                    const uploadData = await uploadResponse.json();
+
+                    if (uploadResponse.status === 200 || uploadResponse.status === 201) {
+                        showStatus('Image successfully uploaded to GitHub!', 'success');
+                        const imageUrl = `https://raw.githubusercontent.com/${repoOwner}/${repoName}/${branchName}/${imagePath}`;
+                        document.getElementById('imagePreview').src = imageUrl;
+                        document.getElementById('imagePreview').style.display = 'block';
+                        document.getElementById('imageUploadArea').style.display = 'none';
+                    } else {
+                        throw new Error(uploadData.message || 'Failed to upload image.');
+                    }
                 } catch (error) {
-                    showStatus(`Error uploading image: ${error.message}`, 'error');
-                    console.error('Error details:', error);
+                    console.error('Upload error:', error);
+                    showStatus('Error uploading image: ' + error.message, 'error');
                 }
-            }
+            };
+
+            reader.onerror = function () {
+                showStatus('Error reading image file.', 'error');
+            };
+
+            reader.readAsDataURL(imageFile);
+        } catch (error) {
+            showStatus(`Unexpected error: ${error.message}`, 'error');
+            console.error('Unexpected error:', error);
+        }
+    }
             
             async function loadExistingData() {
                 const repoOwner = document.getElementById('repoOwner').value;
@@ -615,19 +601,26 @@
                     
                     if (gadgetsResponse.status === 200) {
                         const gadgetsData = await gadgetsResponse.json();
-                        // Use the safe decoder
-                        const gadgetsContent = JSON.parse(safeBase64Decode(gadgetsData.content));
-                        gadgetsCount = Array.isArray(gadgetsContent) ? gadgetsContent.length : 1;
                         
-                        if (Array.isArray(gadgetsContent)) {
-                            gadgetsContent.forEach(gadget => {
-                                const gadgetId = parseInt(gadget.id, 10);
-                                if (!isNaN(gadgetId) && gadgetId > highestId) {
-                                    highestId = gadgetId;
-                                }
-                            });
-                        } else if (gadgetsContent.id) {
-                            highestId = parseInt(gadgetsContent.id, 10) || 0;
+                        try {
+                            // Use our safe decoder with better error handling
+                            const gadgetsContent = JSON.parse(safeBase64Decode(gadgetsData.content));
+                            gadgetsCount = Array.isArray(gadgetsContent) ? gadgetsContent.length : 1;
+                            
+                            if (Array.isArray(gadgetsContent)) {
+                                gadgetsContent.forEach(gadget => {
+                                    const gadgetId = parseInt(gadget.id, 10);
+                                    if (!isNaN(gadgetId) && gadgetId > highestId) {
+                                        highestId = gadgetId;
+                                    }
+                                });
+                            } else if (gadgetsContent.id) {
+                                highestId = parseInt(gadgetsContent.id, 10) || 0;
+                            }
+                        } catch (decodeError) {
+                            showStatus(`Error decoding JSON data: ${decodeError.message}. Try recreating the gadgets.json file.`, 'error');
+                            console.error('Decoding error details:', decodeError);
+                            return;
                         }
                     }
                     
@@ -639,8 +632,17 @@
                     
                     showStatus(`Loaded ${gadgetsCount} existing gadgets. Ready to add new gadget.`, 'success');
                 } catch (error) {
-                    showStatus(`Error loading data: ${error.message}`, 'error');
-                    console.error('Error details:', error);
+                    // If the file doesn't exist, it's not an error - just start with ID 1
+                    if (error.message.includes('404')) {
+                        lastGadgetIdSpan.textContent = 'None';
+                        nextGadgetIdSpan.textContent = '1';
+                        document.getElementById('id').value = '1';
+                        idInfoDiv.style.display = 'block';
+                        showStatus('No existing gadgets found. Starting with ID 1.', 'info');
+                    } else {
+                        showStatus(`Error loading data: ${error.message}`, 'error');
+                        console.error('Error details:', error);
+                    }
                 }
             }
             
@@ -729,223 +731,23 @@
                         if (gadgetsResponse.status === 200) {
                             const gadgetsFileData = await gadgetsResponse.json();
                             gadgetsSha = gadgetsFileData.sha;
-                            // Use the safe decoder
-                            gadgetsContent = JSON.parse(safeBase64Decode(gadgetsFileData.content));
                             
-                            if (!Array.isArray(gadgetsContent)) {
-                                gadgetsContent = [gadgetsContent];
+                            try {
+                                // Use the safe decoder with better error handling
+                                gadgetsContent = JSON.parse(safeBase64Decode(gadgetsFileData.content));
+                                
+                                if (!Array.isArray(gadgetsContent)) {
+                                    gadgetsContent = [gadgetsContent];
+                                }
+                            } catch (decodeError) {
+                                showStatus(`Error decoding gadgets.json: ${decodeError.message}. Creating a new file.`, 'warning');
+                                gadgetsContent = [];
                             }
                         }
                     } catch (error) {
-                        console.warn('gadgets.json might not exist yet:', error);
+                        console.log('gadgets.json might not exist yet, creating new file');
                     }
                     
-                    gadgetsContent.push(gadgetData);
-                    
-                    const gadgetsPayload = {
-                        message: `Add new gadget: ${gadgetData.name}`,
-                        // Use the safe encoder
-                        content: safeBase64Encode(JSON.stringify(gadgetsContent, null, 2)),
-                        branch: branchName
-                    };
-                    
-                    if (gadgetsSha) {
-                        gadgetsPayload.sha = gadgetsSha;
-                    }
-                    
-                    const gadgetsUpdateResponse = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/gadgets.json`, {
-                        method: 'PUT',
-                        headers: {
-                            'Authorization': `token ${token}`,
-                            'Accept': 'application/vnd.github.v3+json',
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(gadgetsPayload)
-                    });
-                    
-                    if (gadgetsUpdateResponse.status !== 200 && gadgetsUpdateResponse.status !== 201) {
-                        const error = await gadgetsUpdateResponse.json();
-                        throw new Error(error.message || 'Failed to update gadgets.json');
-                    }
-                    
-                    showStatus('Updating gadget-description.json...', 'info');
-                    
-                    // Update gadget-description.json
-                    let descriptionsContent = [];
-                    let descriptionsSha = null;
-                    
-                    try {
-                        const descriptionsResponse = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/gadget-description.json?ref=${branchName}`, {
-                            headers: {
-                                'Authorization': `token ${token}`,
-                                'Accept': 'application/vnd.github.v3+json'
-                            }
-                        });
-                        
-                        if (descriptionsResponse.status === 200) {
-                            const descriptionsFileData = await descriptionsResponse.json();
-                            descriptionsSha = descriptionsFileData.sha;
-                            // Use the safe decoder
-                            descriptionsContent = JSON.parse(safeBase64Decode(descriptionsFileData.content));
-                            
-                            if (!Array.isArray(descriptionsContent)) {
-                                descriptionsContent = [descriptionsContent];
-                            }
-                        }
-                    } catch (error) {
-                        console.warn('gadget-description.json might not exist yet:', error);
-                    }
-                    
-                    descriptionsContent.push(descriptionData);
-                    
-                    const descriptionsPayload = {
-                        message: `Add description for gadget: ${gadgetData.name}`,
-                        // Use the safe encoder
-                        content: safeBase64Encode(JSON.stringify(descriptionsContent, null, 2)),
-                        branch: branchName
-                    };
-                    
-                    if (descriptionsSha) {
-                        descriptionsPayload.sha = descriptionsSha;
-                    }
-                    
-                    const descriptionsUpdateResponse = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/gadget-description.json`, {
-                        method: 'PUT',
-                        headers: {
-                            'Authorization': `token ${token}`,
-                            'Accept': 'application/vnd.github.v3+json',
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(descriptionsPayload)
-                    });
-                    
-                    if (descriptionsUpdateResponse.status !== 200 && descriptionsUpdateResponse.status !== 201) {
-                        const error = await descriptionsUpdateResponse.json();
-                        throw new Error(error.message || 'Failed to update gadget-description.json');
-                    }
-                    
-                    showStatus('Gadget successfully added to GitHub!', 'success');
-                    
-                    // Update ID info
-                    const newGadgetId = parseInt(gadgetData.id, 10);
-                    lastGadgetIdSpan.textContent = newGadgetId.toString();
-                    nextGadgetIdSpan.textContent = (newGadgetId + 1).toString();
-                    
-                    // Set next ID and clear other fields
-                    document.getElementById('id').value = (newGadgetId + 1).toString();
-                    clearForm();
-                    
-                } catch (error) {
-                    showStatus(`Error: ${error.message}`, 'error');
-                    console.error('Error details:', error);
-                }
-            }
-            function clearForm() {
-                // Clear basic info (except ID)
-                document.getElementById('name').value = '';
-                document.getElementById('brand').value = '';
-                document.getElementById('price').value = '';
-                document.getElementById('category').value = '';
-                document.getElementById('description').value = '';
-                document.getElementById('image').value = '';
-                document.getElementById('rating').value = '';
-                
-                // Clear extended info
-                document.getElementById('extendedDescription').value = '';
-                
-                // Clear specifications
-                specifications = [];
-                document.getElementById('specificationsContainer').innerHTML = '';
-                addSpecification();
-                
-                // Hide image areas
-                imageUploadArea.style.display = 'none';
-                imagePreview.style.display = 'none';
-                
-                // Switch back to basic tab
-                switchTab('basic');
-            }
-            
-            function showStatus(message, type) {
-                statusDiv.textContent = message;
-                statusDiv.className = `status ${type}`;
-                statusDiv.style.display = 'block';
-                
-                // Auto-hide success messages after 5 seconds
-                if (type === 'success') {
-                    setTimeout(() => {
-                        statusDiv.style.display = 'none';
-                    }, 5000);
-                }
-            }
-        });
-        
-        function switchTab(tabName) {
-            // Hide all tab contents
-            const tabContents = document.querySelectorAll('.tab-content');
-            tabContents.forEach(content => content.classList.remove('active'));
-            
-            // Remove active class from all tabs
-            const tabs = document.querySelectorAll('.tab');
-            tabs.forEach(tab => tab.classList.remove('active'));
-            
-            // Show selected tab content
-            document.getElementById(`${tabName}-tab`).classList.add('active');
-            
-            // Add active class to selected tab
-            event.target.classList.add('active');
-        }
-        
-        function addSpecification() {
-            const container = document.getElementById('specificationsContainer');
-            const specIndex = specifications.length;
-            
-            const specDiv = document.createElement('div');
-            specDiv.className = 'spec-group';
-            specDiv.innerHTML = `
-                <label>Specification ${specIndex + 1}</label>
-                <div class="spec-inputs">
-                    <input type="text" placeholder="Name (e.g., Display)" onchange="updateSpecification(${specIndex}, 'name', this.value)">
-                    <input type="text" placeholder="Value (e.g., 6.8-inch Dynamic AMOLED)" onchange="updateSpecification(${specIndex}, 'value', this.value)">
-                    <button type="button" class="remove-spec" onclick="removeSpecification(${specIndex})">Remove</button>
-                </div>
-            `;
-            
-            container.appendChild(specDiv);
-            specifications.push({ name: '', value: '' });
-        }
-        
-        function removeSpecification(index) {
-            const container = document.getElementById('specificationsContainer');
-            const specGroups = container.querySelectorAll('.spec-group');
-            
-            if (specGroups.length > 1) {
-                specGroups[index].remove();
-                specifications.splice(index, 1);
-                
-                // Update indices in remaining specifications
-                const remainingGroups = container.querySelectorAll('.spec-group');
-                remainingGroups.forEach((group, newIndex) => {
-                    const label = group.querySelector('label');
-                    label.textContent = `Specification ${newIndex + 1}`;
-                    
-                    const inputs = group.querySelectorAll('input');
-                    inputs[0].setAttribute('onchange', `updateSpecification(${newIndex}, 'name', this.value)`);
-                    inputs[1].setAttribute('onchange', `updateSpecification(${newIndex}, 'value', this.value)`);
-                    
-                    const removeBtn = group.querySelector('.remove-spec');
-                    removeBtn.setAttribute('onclick', `removeSpecification(${newIndex})`);
-                });
-            } else {
-                alert('At least one specification is required.');
-            }
-        }
-        
-        function updateSpecification(index, field, value) {
-            if (specifications[index]) {
-                specifications[index][field] = value;
-            }
-        }
-    </script>
-</body>
-</html>
+                    // Check for duplicate IDs
+                    const duplicateId = gadgetsContent.find(gadget => parseInt(gadget.id) === gadgetData.id);
+                    if (duplicateId)
