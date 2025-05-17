@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gadget Management System</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .container {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        h1, h2 {
+            color: #24292e;
+            margin-bottom: 24px;
+        }
+        .form-group {
+            margin-bottom: 16px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        input, select, textarea {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+        button {
+            background-color: #2ea44f;
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 8px;
+            margin-right: 8px;
+        }
+        button:hover {
+            background-color: #2c974b;
+        }
+        .status {
+            margin-top: 20px;
+            padding: 16px;
+            border-radius: 4px;
+            display: none;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+        }
+        .warning {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        #responseArea {
+            margin-top: 20px;
+            background-color: #f6f8fa;
+            padding: 16px;
+            border-radius: 4px;
+            display: none;
+            white-space: pre-wrap;
+            font-family: monospace;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .id-info {
+            background-color: #e9ecef;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 16px;
+            display: none;
+        }
+        .id-info strong {
+            font-weight: 600;
+        }
+        .load-button {
+            background-color: #0366d6;
+            margin-bottom: 16px;
+        }
+        .load-button:hover {
+            background-color: #0358b8;
+        }
+        .logout-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background-color: #d73a49;
+            padding: 8px 12px;
+        }
+        .logout-btn:hover {
+            background-color: #c53030;
+        }
+        #imageUploadArea {
+            display: none;
+            margin-top: 16px;
+            padding: 16px;
+            background-color: #fff3cd;
+            border-radius: 4px;
+        }
+        #imageUploadForm {
+            margin-top: 12px;
+        }
+        .check-image-button {
+            background-color: #6c757d;
+            margin-left: 8px;
+        }
+        .check-image-button:hover {
+            background-color: #5a6268;
+        }
+        .image-input-wrapper {
+            display: flex;
+            align-items: center;
+        }
+        #imagePreview {
+            max-width: 150px;
+            max-height: 150px;
+            margin-top: 10px;
+            display: none;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid #ddd;
+            margin-bottom: 20px;
+        }
+        .tab {
+            padding: 10px 16px;
+            cursor: pointer;
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
+            border-bottom: none;
+            margin-right: 2px;
+        }
+        .tab.active {
+            background-color: white;
+            border-bottom: 1px solid white;
+            margin-bottom: -1px;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .spec-group {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 12px;
+            margin-bottom: 12px;
+            background-color: white;
+        }
+        .spec-group label {
+            margin-bottom: 4px;
+        }
+        .spec-inputs {
+            display: flex;
+            gap: 8px;
+        }
+        .spec-inputs input {
+            flex: 1;
+        }
+        .remove-spec {
+            background-color: #dc3545;
+            padding: 4px 8px;
+            font-size: 12px;
+        }
+        .remove-spec:hover {
+            background-color: #c82333;
+        }
+        .add-spec {
+            background-color: #007bff;
+        }
+        .add-spec:hover {
+            background-color: #0056b3;
+        }
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        @media (max-width: 768px) {
+            .two-column {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <button id="logoutBtn" class="logout-btn">Logout</button>
+    <div id="status" class="status"></div>
+    <div id="responseArea"></div>
+    
+    <div class="container">
+        <h1>Gadget Management System</h1>
+        
+        <div class="form-group">
+            <label for="repoOwner">Repository Owner (Username)</label>
+            <input type="text" id="repoOwner" placeholder="e.g., yourusername" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="repoName">Repository Name</label>
+            <input type="text" id="repoName" placeholder="e.g., my-repository" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="branchName">Branch Name</label>
+            <input type="text" id="branchName" value="main" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="token">GitHub Personal Access Token (with repo scope)</label>
+            <input type="password" id="token" placeholder="ghp_xxxxxxxxxxxx" required>
+            <small>Token will not be stored and is only used for this request.</small>
+        </div>
+        
+        <button id="loadDataBtn" class="load-button">Load Existing Data</button>
+        
+        <div id="idInfo" class="id-info">
+            <p>Last gadget ID: <strong id="lastGadgetId">None</strong></p>
+            <p>Suggested next ID: <strong id="nextGadgetId">1</strong></p>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('basic')">Basic Info</div>
+            <div class="tab" onclick="switchTab('extended')">Extended Description</div>
+        </div>
+
+        <div id="basic-tab" class="tab-content active">
+            <h2>Basic Gadget Information</h2>
+            
+            <div class="two-column">
+                <div>
+                    <div class="form-group">
+                        <label for="id">ID</label>
+                        <input type="number" id="id" placeholder="e.g., 1" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="name">Name</label>
+                        <input type="text" id="name" placeholder="e.g., Galaxy S24 Ultra" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="brand">Brand</label>
+                        <input type="text" id="brand" placeholder="e.g., Samsung" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="price">Price</label>
+                        <input type="text" id="price" placeholder="e.g., ₹1199.99" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="category">Category</label>
+                        <select id="category" required>
+                            <option value="">Select category</option>
+                            <option value="smartphones">Smartphones</option>
+                            <option value="laptops">Laptops</option>
+                            <option value="wearables">Wearables</option>
+                            <option value="audio">Audio</option>
+                            <option value="gaming">Gaming</option>
+                            <option value="accessories">Accessories</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div>
+                    <div class="form-group">
+                        <label for="rating">Rating (1-5)</label>
+                        <input type="number" id="rating" min="1" max="5" step="0.1" placeholder="e.g., 4.8" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="image">Image Path</label>
+                        <div class="image-input-wrapper">
+                            <input type="text" id="image" placeholder="e.g., images/galaxy-s24.jpg" required>
+                            <button id="checkImageBtn" class="check-image-button">Check Image</button>
+                        </div>
+                        <small>Image should be in the repository's images folder.</small>
+                        <img id="imagePreview" alt="Image Preview">
+                    </div>
+                    
+                    <div id="imageUploadArea">
+                        <h3>Image Not Found</h3>
+                        <p>The specified image does not exist in the repository. Please upload it:</p>
+                        <form id="imageUploadForm">
+                            <input type="file" id="imageFile" accept="image/*">
+                            <button type="button" id="uploadImageBtn">Upload Image</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="description">Short Description</label>
+                <textarea id="description" placeholder="Brief gadget description" required></textarea>
+            </div>
+        </div>
+
+        <div id="extended-tab" class="tab-content">
+            <h2>Extended Description & Specifications</h2>
+            
+            <div class="form-group">
+                <label for="extendedDescription">Extended Description</label>
+                <textarea id="extendedDescription" placeholder="Detailed gadget description with features and benefits" required style="min-height: 150px;"></textarea>
+            </div>
+            
+            <h3>Specifications</h3>
+            <div id="specificationsContainer">
+                <!-- Specifications will be added dynamically -->
+            </div>
+            <button type="button" class="add-spec" onclick="addSpecification()">Add Specification</button>
+        </div>
+
+        <button id="submitBtn">Submit to GitHub</button>
+    </div>
+
+    <script>
+        let specifications = [];
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const submitBtn = document.getElementById('submitBtn');
+            const loadDataBtn = document.getElementById('loadDataBtn');
+            const checkImageBtn = document.getElementById('checkImageBtn');
+            const uploadImageBtn = document.getElementById('uploadImageBtn');
+            const statusDiv = document.getElementById('status');
+            const responseArea = document.getElementById('responseArea');
+            const idInfoDiv = document.getElementById('idInfo');
+            const lastGadgetIdSpan = document.getElementById('lastGadgetId');
+            const nextGadgetIdSpan = document.getElementById('nextGadgetId');
+            const logoutBtn = document.getElementById('logoutBtn');
+            const imageUploadArea = document.getElementById('imageUploadArea');
+            const imagePreview = document.getElementById('imagePreview');
+            
+            // Logout button functionality
+            logoutBtn.addEventListener('click', function() {
+                localStorage.removeItem('loggedIn');
+                localStorage.removeItem('username');
+                sessionStorage.removeItem('loggedIn');
+                sessionStorage.removeItem('username');
+                window.location.href = 'index.html';
+            });
+
+            // Prevent accessing gadget-management-form.html after logout
+            if (!localStorage.getItem('loggedIn') && !sessionStorage.getItem('loggedIn')) {
+                window.location.href = 'index.html';
+            }
+            
+            // Initialize with one specification
+            addSpecification();
+            
+            // Event listeners
+            loadDataBtn.addEventListener('click', loadExistingData);
+            checkImageBtn.addEventListener('click', checkImageExists);
+            uploadImageBtn.addEventListener('click', uploadImage);
+            submitBtn.addEventListener('click', handleSubmit);
+            
+            // Check if image exists in the repository
+            async function checkImageExists() {
+                const repoOwner = document.getElementById('repoOwner').value;
+                const repoName = document.getElementById('repoName').value;
+                const branchName = document.getElementById('branchName').value;
+                const token = document.getElementById('token').value;
+                const imagePath = document.getElementById('image').value.trim();
+                
+                if (!repoOwner || !repoName || !branchName || !token || !imagePath) {
+                    showStatus('Please fill in all GitHub repository fields and image path.', 'error');
+                    return;
+                }
+                
+                showStatus('Checking if image exists...', 'info');
+                imageUploadArea.style.display = 'none';
+                imagePreview.style.display = 'none';
+                
+                try {
+                    const imageResponse = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/${imagePath}?ref=${branchName}`, {
+                        headers: {
+                            'Authorization': `token ${token}`,
+                            'Accept': 'application/vnd.github.v3+json'
+                        }
+                    });
+                    
+                    if (imageResponse.status === 200) {
+                        const imageData = await imageResponse.json();
+                        
+                        if (imageData.type === 'file' && imageData.name.match(/\.(jpe?g|png|gif|svg|webp)$/i)) {
+                            showStatus('Image found in repository!', 'success');
+                            
+                            const imageUrl = `https://raw.githubusercontent.com/${repoOwner}/${repoName}/${branchName}/${imagePath}`;
+                            imagePreview.src = imageUrl;
+                            imagePreview.style.display = 'block';
+                        } else {
+                            showStatus('The path exists but is not an image file.', 'warning');
+                            imageUploadArea.style.display = 'block';
+                        }
+                    } else if (imageResponse.status === 404) {
+                        showStatus('Image not found in repository.', 'warning');
+                        imageUploadArea.style.display = 'block';
+                    } else {
+                        throw new Error(`Failed to check image: ${imageResponse.statusText}`);
+                    }
+                } catch (error) {
+                    showStatus(`Error checking image: ${error.message}`, 'error');
+                    console.error('Error details:', error);
+                }
+            }
+            
+            // Upload image to the repository
+            async function uploadImage() {
+                const repoOwner = document.getElementById('repoOwner').value;
+                const repoName = document.getElementById('repoName').value;
+                const branchName = document.getElementById('branchName').value;
+                const token = document.getElementById('token').value;
+                const imagePath = document.getElementById('image').value.trim();
+                const imageFile = document.getElementById('imageFile').files[0];
+                
+                if (!repoOwner || !repoName || !branchName || !token || !imagePath) {
+                    showStatus('Please fill in all GitHub repository fields and image path.', 'error');
+                    return;
+                }
+                
+                if (!imageFile) {
+                    showStatus('Please select an image file to upload.', 'error');
+                    return;
+                }
+                
+                showStatus('Uploading image...', 'info');
+                
+                try {
+                    const reader = new FileReader();
+                    reader.readAsDataURL(imageFile);
+                    
+                    reader.onload = async function() {
+                        try {
+                            const base64Content = reader.result.split(',')[1];
+                            
+                            const payload = {
+                                message: `Add product image for ${document.getElementById('name').value || 'gadget'}`,
+                                content: base64Content,
+                                branch: branchName
+                            };
+                            
+                            const uploadResponse = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/${imagePath}`, {
+                                method: 'PUT',
+                                headers: {
+                                    'Authorization': `token ${token}`,
+                                    'Accept': 'application/vnd.github.v3+json',
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify(payload)
+                            });
+                            
+                            const uploadData = await uploadResponse.json();
+                            
+                            if (uploadResponse.status === 200 || uploadResponse.status === 201) {
+                                showStatus('Image successfully uploaded to GitHub!', 'success');
+                                
+                                const imageUrl = `https://raw.githubusercontent.com/${repoOwner}/${repoName}/${branchName}/${imagePath}`;
+                                imagePreview.src = imageUrl;
+                                imagePreview.style.display = 'block';
+                                imageUploadArea.style.display = 'none';
+                            } else {
+                                throw new Error(uploadData.message || 'Failed to upload image');
+                            }
+                        } catch (error) {
+                            showStatus(`Error uploading image: ${error.message}`, 'error');
+                            console.error('Error details:', error);
+                        }
+                    };
+                    
+                    reader.onerror = function() {
+                        showStatus('Error reading the image file.', 'error');
+                    };
+                } catch (error) {
+                    showStatus(`Error uploading image: ${error.message}`, 'error');
+                    console.error('Error details:', error);
+                }
+            }
+            
+            async function loadExistingData() {
+                const repoOwner = document.getElementById('repoOwner').value;
+                const repoName = document.getElementById('repoName').value;
+                const branchName = document.getElementById('branchName').value;
+                const token = document.getElementById('token').value;
+                
+                if (!repoOwner || !repoName || !branchName || !token) {
+                    showStatus('Please fill in all GitHub repository fields.', 'error');
+                    return;
+                }
+                
+                showStatus('Loading existing data...', 'info');
+                
+                try {
+                    // Load gadgets.json
+                    const gadgetsResponse = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/gadgets.json?ref=${branchName}`, {
+                        headers: {
+                            'Authorization': `token ${token}`,
+                            'Accept': 'application/vnd.github.v3+json'
+                        }
+                    });
+                    
+                    let highestId = 0;
+                    let gadgetsCount = 0;
+                    
+                    if (gadgetsResponse.status === 200) {
+                        const gadgetsData = await gadgetsResponse.json();
+                        const gadgetsContent = JSON.parse(atob(gadgetsData.content));
+                        gadgetsCount = Array.isArray(gadgetsContent) ? gadgetsContent.length : 1;
+                        
+                        if (Array.isArray(gadgetsContent)) {
+                            gadgetsContent.forEach(gadget => {
+                                const gadgetId = parseInt(gadget.id, 10);
+                                if (!isNaN(gadgetId) && gadgetId > highestId) {
+                                    highestId = gadgetId;
+                                }
+                            });
+                        } else if (gadgetsContent.id) {
+                            highestId = parseInt(gadgetsContent.id, 10) || 0;
+                        }
+                    }
+                    
+                    // Update ID info
+                    lastGadgetIdSpan.textContent = highestId > 0 ? highestId.toString() : 'None';
+                    nextGadgetIdSpan.textContent = (highestId + 1).toString();
+                    document.getElementById('id').value = (highestId + 1).toString();
+                    idInfoDiv.style.display = 'block';
+                    
+                    showStatus(`Loaded ${gadgetsCount} existing gadgets. Ready to add new gadget.`, 'success');
+                } catch (error) {
+                    showStatus(`Error loading data: ${error.message}`, 'error');
+                    console.error('Error details:', error);
+                }
+            }
+            
+            async function handleSubmit() {
+                statusDiv.style.display = 'none';
+                statusDiv.className = 'status';
+                responseArea.style.display = 'none';
+                
+                const repoOwner = document.getElementById('repoOwner').value;
+                const repoName = document.getElementById('repoName').value;
+                const branchName = document.getElementById('branchName').value;
+                const token = document.getElementById('token').value;
+                
+                if (!repoOwner || !repoName || !branchName || !token) {
+                    showStatus('Please fill in all GitHub repository fields.', 'error');
+                    return;
+                }
+                
+                // Get basic gadget data
+                const gadgetData = {
+                    id: parseInt(document.getElementById('id').value),
+                    name: document.getElementById('name').value,
+                    brand: document.getElementById('brand').value,
+                    price: document.getElementById('price').value,
+                    category: document.getElementById('category').value,
+                    description: document.getElementById('description').value,
+                    image: document.getElementById('image').value.trim(),
+                    rating: parseFloat(document.getElementById('rating').value)
+                };
+                
+                // Get extended description data
+                const descriptionData = {
+                    id: parseInt(document.getElementById('id').value),
+                    extendedDescription: document.getElementById('extendedDescription').value,
+                    specifications: specifications.filter(spec => spec.name && spec.value)
+                };
+                
+                // Validate data
+                for (const [key, value] of Object.entries(gadgetData)) {
+                    if (!value && value !== 0) {
+                        showStatus(`Please fill in the ${key} field.`, 'error');
+                        return;
+                    }
+                }
+                
+                if (!descriptionData.extendedDescription) {
+                    showStatus('Please fill in the extended description.', 'error');
+                    return;
+                }
+                
+                if (descriptionData.specifications.length === 0) {
+                    showStatus('Please add at least one specification.', 'error');
+                    return;
+                }
+                
+                try {
+                    // Check if image exists
+                    showStatus('Checking if image exists...', 'info');
+                    const imageResponse = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/${gadgetData.image}?ref=${branchName}`, {
+                        headers: {
+                            'Authorization': `token ${token}`,
+                            'Accept': 'application/vnd.github.v3+json'
+                        }
+                    });
+                    
+                    if (imageResponse.status !== 200) {
+                        showStatus('The specified image does not exist in the repository. Please upload it first.', 'warning');
+                        imageUploadArea.style.display = 'block';
+                        return;
+                    }
+                    
+                    showStatus('Updating gadgets.json...', 'info');
+                    
+                    // Update gadgets.json
+                    let gadgetsContent = [];
+                    let gadgetsSha = null;
+                    
+                    try {
+                        const gadgetsResponse = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/gadgets.json?ref=${branchName}`, {
+                            headers: {
+                                'Authorization': `token ${token}`,
+                                'Accept': 'application/vnd.github.v3+json'
+                            }
+                        });
+                        
+                        if (gadgetsResponse.status === 200) {
+                            const gadgetsFileData = await gadgetsResponse.json();
+                            gadgetsSha = gadgetsFileData.sha;
+                            gadgetsContent = JSON.parse(atob(gadgetsFileData.content));
+                            
+                            if (!Array.isArray(gadgetsContent)) {
+                                gadgetsContent = [gadgetsContent];
+                            }
+                        }
+                    } catch (error) {
+                        console.warn('gadgets.json might not exist yet:', error);
+                    }
+                    
+                    gadgetsContent.push(gadgetData);
+                    
+                    const gadgetsPayload = {
+                        message: `Add new gadget: ${gadgetData.name}`,
+                        content: btoa(JSON.stringify(gadgetsContent, null, 2)),
+                        branch: branchName
+                    };
+                    
+                    if (gadgetsSha) {
+                        gadgetsPayload.sha = gadgetsSha;
+                    }
+                    
+                    const gadgetsUpdateResponse = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/gadgets.json`, {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `token ${token}`,
+                            'Accept': 'application/vnd.github.v3+json',
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(gadgetsPayload)
+                    });
+                    
+                    if (gadgetsUpdateResponse.status !== 200 && gadgetsUpdateResponse.status !== 201) {
+                        const error = await gadgetsUpdateResponse.json();
+                        throw new Error(error.message || 'Failed to update gadgets.json');
+                    }
+                    
+                    showStatus('Updating gadget-description.json...', 'info');
+                    
+                    // Update gadget-description.json
+                    let descriptionsContent = [];
+                    let descriptionsSha = null;
+                    
+                    try {
+                        const descriptionsResponse = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/gadget-description.json?ref=${branchName}`, {
+                            headers: {
+                                'Authorization': `token ${token}`,
+                                'Accept': 'application/vnd.github.v3+json'
+                            }
+                        });
+                        
+                        if (descriptionsResponse.status === 200) {
+                            const descriptionsFileData = await descriptionsResponse.json();
+                            descriptionsSha = descriptionsFileData.sha;
+                            descriptionsContent = JSON.parse(atob(descriptionsFileData.content));
+                            
+                            if (!Array.isArray(descriptionsContent)) {
+                                descriptionsContent = [descriptionsContent];
+                            }
+                        }
+                    } catch (error) {
+                        console.warn('gadget-description.json might not exist yet:', error);
+                    }
+                    
+                    descriptionsContent.push(descriptionData);
+                    
+                    const descriptionsPayload = {
+                        message: `Add description for gadget: ${gadgetData.name}`,
+                        content: btoa(JSON.stringify(descriptionsContent, null, 2)),
+                        branch: branchName
+                    };
+                    
+                    if (descriptionsSha) {
+                        descriptionsPayload.sha = descriptionsSha;
+                    }
+                    
+                    const descriptionsUpdateResponse = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/gadget-description.json`, {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `token ${token}`,
+                            'Accept': 'application/vnd.github.v3+json',
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(descriptionsPayload)
+                    });
+                    
+                    if (descriptionsUpdateResponse.status !== 200 && descriptionsUpdateResponse.status !== 201) {
+                        const error = await descriptionsUpdateResponse.json();
+                        throw new Error(error.message || 'Failed to update gadget-description.json');
+                    }
+                    
+                    showStatus('Gadget successfully added to GitHub!', 'success');
+                    
+                    // Update ID info
+                    const newGadgetId = parseInt(gadgetData.id, 10);
+                    lastGadgetIdSpan.textContent = newGadgetId.toString();
+                    nextGadgetIdSpan.textContent = (newGadgetId + 1).toString();
+                    
+                    // Set next ID and clear other fields
+                    document.getElementById('id').value = (newGadgetId + 1).toString();
+                    clearForm();
+                    
+                } catch (error) {
+                    showStatus(`Error: ${error.message}`, 'error');
+                    console.error('Error details:', error);
+                }
+            }
+            
+            function clearForm() {
+                // Clear basic info (except ID)
+                document.getElementById('name').value = '';
+                document.getElementById('brand').value = '';
+                document.getElementById('price').value = '';
+                document.getElementById('category').value = '';
+                document.getElementById('description').value = '';
+                document.getElementById('image').value = '';
+                document.getElementById('rating').value = '';
+                
+                // Clear extended info
+                document.getElementById('extendedDescription').value = '';
+                
+                // Clear specifications
+                specifications = [];
+                document.getElementById('specificationsContainer').innerHTML = '';
+                addSpecification();
+                
+                // Hide image areas
+                imageUploadArea.style.display = 'none';
+                imagePreview.style.display = 'none';
+                
+                // Switch back to basic tab
+                switchTab('basic');
+            }
+            
+            function showStatus(message, type) {
+                statusDiv.textContent = message;
+                statusDiv.className = `status ${type}`;
+                statusDiv.style.display = 'block';
+                
+                // Auto-hide success messages after 5 seconds
+                if (type === 'success') {
+                    setTimeout(() => {
+                        statusDiv.style.display = 'none';
+                    }, 5000);
+                }
+            }
+        });
+        
+        function switchTab(tabName) {
+            // Hide all tab contents
+            const tabContents = document.querySelectorAll('.tab-content');
+            tabContents.forEach(content => content.classList.remove('active'));
+            
+            // Remove active class from all tabs
+            const tabs = document.querySelectorAll('.tab');
+            tabs.forEach(tab => tab.classList.remove('active'));
+            
+            // Show selected tab content
+            document.getElementById(`${tabName}-tab`).classList.add('active');
+            
+            // Add active class to selected tab
+            event.target.classList.add('active');
+        }
+        
+        function addSpecification() {
+            const container = document.getElementById('specificationsContainer');
+            const specIndex = specifications.length;
+            
+            const specDiv = document.createElement('div');
+            specDiv.className = 'spec-group';
+            specDiv.innerHTML = `
+                <label>Specification ${specIndex + 1}</label>
+                <div class="spec-inputs">
+                    <input type="text" placeholder="Name (e.g., Display)" onchange="updateSpecification(${specIndex}, 'name', this.value)">
+                    <input type="text" placeholder="Value (e.g., 6.8-inch Dynamic AMOLED)" onchange="updateSpecification(${specIndex}, 'value', this.value)">
+                    <button type="button" class="remove-spec" onclick="removeSpecification(${specIndex})">Remove</button>
+                </div>
+            `;
+            
+            container.appendChild(specDiv);
+            specifications.push({ name: '', value: '' });
+        }
+        
+        function removeSpecification(index) {
+            const container = document.getElementById('specificationsContainer');
+            const specGroups = container.querySelectorAll('.spec-group');
+            
+            if (specGroups.length > 1) {
+                specGroups[index].remove();
+                specifications.splice(index, 1);
+                
+                // Update indices in remaining specifications
+                const remainingGroups = container.querySelectorAll('.spec-group');
+                remainingGroups.forEach((group, newIndex) => {
+                    const label = group.querySelector('label');
+                    label.textContent = `Specification ${newIndex + 1}`;
+                    
+                    const inputs = group.querySelectorAll('input');
+                    inputs[0].setAttribute('onchange', `updateSpecification(${newIndex}, 'name', this.value)`);
+                    inputs[1].setAttribute('onchange', `updateSpecification(${newIndex}, 'value', this.value)`);
+                    
+                    const removeBtn = group.querySelector('.remove-spec');
+                    removeBtn.setAttribute('onclick', `removeSpecification(${newIndex})`);
+                });
+            } else {
+                alert('At least one specification is required.');
+            }
+        }
+        
+        function updateSpecification(index, field, value) {
+            if (specifications[index]) {
+                specifications[index][field] = value;
+            }
+        }
+    </script>
+</body>
+</html>
