@@ -684,270 +684,238 @@
         }
         
         // Submit gadget data to GitHub
-        async function handleSubmit() {
-            const statusDiv = document.getElementById('status');
-            statusDiv.style.display = 'none';
-            statusDiv.className = 'status';
-            document.getElementById('responseArea').style.display = 'none';
-            
-            const repoOwner = document.getElementById('repoOwner').value;
-            const repoName = document.getElementById('repoName').value;
-            const branchName = document.getElementById('branchName').value;
-            const token = document.getElementById('token').value;
-            
-            if (!repoOwner || !repoName || !branchName || !token) {
-                showStatus('Please fill in all GitHub repository fields.', 'error');
-                return;
-            }
-            
-            // Gather basic gadget data
-            const gadgetData = {
-                id: parseInt(document.getElementById('id').value),
-                name: document.getElementById('name').value,
-                brand: document.getElementById('brand').value,
-                price: document.getElementById('price').value,
-                category: document.getElementById('category').value,
-                description: document.getElementById('description').value,
-                image: document.getElementById('image').value.trim(),
-                rating: parseFloat(document.getElementById('rating').value)
-            };
-            
-            // Gather extended description data
-            const descriptionData = {
-                id: parseInt(document.getElementById('id').value),
-                extendedDescription: document.getElementById('extendedDescription').value,
-                specifications: specifications.filter(spec => spec.name && spec.value)
-            };
-            
-            // Validate required fields
-            for (const [key, value] of Object.entries(gadgetData)) {
-                if (!value && value !== 0) {
-                    showStatus(`Please fill in the ${key} field.`, 'error');
-                    switchTab('basic');
-                    return;
-                }
-            }
-            
-            if (!descriptionData.extendedDescription) {
-                showStatus('Please fill in the extended description.', 'error');
-                switchTab('extended');
-                return;
-            }
-            
-            if (descriptionData.specifications.length === 0) {
-                showStatus('Please add at least one specification.', 'error');
-                switchTab('extended');
-                return;
-            }
-            
-            try {
-                // Check if the image exists first
-                showStatus('Checking if image exists...', 'info');
-                const imageResponse = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/${gadgetData.image}?ref=${branchName}`, {
-                    headers: {
-                        'Authorization': `token ${token}`,
-                        'Accept': 'application/vnd.github.v3+json'
-                    }
-                });
-                
-                if (imageResponse.status !== 200) {
-                    showStatus('The specified image does not exist in the repository. Please upload it first.', 'warning');
-                    document.getElementById('imageUploadArea').style.display = 'block';
-                    switchTab('basic');
-                    return;
-                }
-                
-                // Update gadgets.json
-                showStatus('Updating gadgets.json...', 'info');
-                
-                let gadgetsContent = [];
-                let gadgetsSha = null;
-                
-                try {
-                    const gadgetsResponse = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/gadgets.json?ref=${branchName}`, {
-                        headers: {
-                            'Authorization': `token ${token}`,
-                            'Accept': 'application/vnd.github.v3+json'
-                        }
-                    });
-                    
-                    if (gadgetsResponse.status === 200) {const gadgetsData = await gadgetsResponse.json();
-                        gadgetsSha = gadgetsData.sha;
-                        
-                        try {
-                            const content = gadgetsData.content.replace(/\\n/g, '');
-                            gadgetsContent = JSON.parse(decodeBase64(content));
-                            
-                            if (!Array.isArray(gadgetsContent)) {
-                                gadgetsContent = [gadgetsContent];
-                            }
-                        } catch (decodeError) {
-                            console.error('Error decoding JSON data:', decodeError);
-                            throw new Error('Failed to parse existing gadgets.json file.');
-                        }
-                    }
-                } catch (error) {
-                    console.error('Error fetching gadgets.json:', error);
-                    // If file doesn't exist, we'll create it
-                }
-                
-                // Check if gadget with same ID already exists
-                const existingIndex = gadgetsContent.findIndex(g => parseInt(g.id) === gadgetData.id);
-                if (existingIndex >= 0) {
-                    const confirmReplace = confirm(`A gadget with ID ${gadgetData.id} already exists. Do you want to replace it?`);
-                    if (!confirmReplace) {
-                        showStatus('Submission cancelled. Please choose a different ID.', 'warning');
-                        return;
-                    }
-                    gadgetsContent[existingIndex] = gadgetData;
-                } else {
-                    gadgetsContent.push(gadgetData);
-                }
-                
-                // Sort by ID for better organization
-                gadgetsContent.sort((a, b) => parseInt(a.id) - parseInt(b.id));
-                
-                // Update or create gadgets.json
-                const gadgetsPayload = {
-                    message: `Update gadgets.json with ${gadgetData.name}`,
-                    content: encodeBase64(JSON.stringify(gadgetsContent, null, 2)),
-                    branch: branchName
-                };
-                
-                if (gadgetsSha) {
-                    gadgetsPayload.sha = gadgetsSha;
-                }
-                
-                const gadgetsUpdateResponse = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/gadgets.json`, {
-                    method: 'PUT',
-                    headers: {
-                        'Authorization': `token ${token}`,
-                        'Accept': 'application/vnd.github.v3+json',
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(gadgetsPayload)
-                });
-                
-                if (!gadgetsUpdateResponse.ok) {
-                    const gadgetsError = await gadgetsUpdateResponse.json();
-                    throw new Error(`Failed to update gadgets.json: ${gadgetsError.message}`);
-                }
-                
-                // Create or update extended description file
-                showStatus('Adding extended description...', 'info');
-                
-                const descriptionFileName = `descriptions/gadget-${gadgetData.id}.json`;
-                let descriptionSha = null;
-                
-                try {
-                    const descriptionResponse = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/${descriptionFileName}?ref=${branchName}`, {
-                        headers: {
-                            'Authorization': `token ${token}`,
-                            'Accept': 'application/vnd.github.v3+json'
-                        }
-                    });
-                    
-                    if (descriptionResponse.status === 200) {
-                        const descriptionData = await descriptionResponse.json();
-                        descriptionSha = descriptionData.sha;
-                    }
-                } catch (error) {
-                    console.error('Error checking for existing description file:', error);
-                    // If file doesn't exist, we'll create it
-                }
-                
-                // Create descriptions directory if it doesn't exist
-                try {
-                    const dirResponse = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/descriptions?ref=${branchName}`, {
-                        headers: {
-                            'Authorization': `token ${token}`,
-                            'Accept': 'application/vnd.github.v3+json'
-                        }
-                    });
-                    
-                    if (dirResponse.status === 404) {
-                        const dirPayload = {
-                            message: 'Create descriptions directory',
-                            content: '',
-                            branch: branchName
-                        };
-                        
-                        await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/descriptions/.gitkeep`, {
-                            method: 'PUT',
-                            headers: {
-                                'Authorization': `token ${token}`,
-                                'Accept': 'application/vnd.github.v3+json',
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify({
-                                ...dirPayload,
-                                content: encodeBase64('')
-                            })
-                        });
-                    }
-                } catch (error) {
-                    console.error('Error checking descriptions directory:', error);
-                }
-                
-                // Update or create description file
-                const descriptionPayload = {
-                    message: `Update extended description for ${gadgetData.name}`,
-                    content: encodeBase64(JSON.stringify(descriptionData, null, 2)),
-                    branch: branchName
-                };
-                
-                if (descriptionSha) {
-                    descriptionPayload.sha = descriptionSha;
-                }
-                
-                const descriptionUpdateResponse = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/${descriptionFileName}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Authorization': `token ${token}`,
-                        'Accept': 'application/vnd.github.v3+json',
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(descriptionPayload)
-                });
-                
-                if (!descriptionUpdateResponse.ok) {
-                    const descriptionError = await descriptionUpdateResponse.json();
-                    throw new Error(`Failed to update description file: ${descriptionError.message}`);
-                }
-                
-                showStatus(`Successfully added/updated gadget "${gadgetData.name}" to GitHub!`, 'success');
-                
-                // Reset the form
-                document.getElementById('name').value = '';
-                document.getElementById('brand').value = '';
-                document.getElementById('price').value = '';
-                document.getElementById('category').selectedIndex = 0;
-                document.getElementById('description').value = '';
-                document.getElementById('extendedDescription').value = '';
-                document.getElementById('rating').value = '';
-                document.getElementById('image').value = '';
-                document.getElementById('imagePreview').style.display = 'none';
-                specifications = [];
-                document.getElementById('specificationsContainer').innerHTML = '';
-                
-                // Increment the ID field
-                const currentId = parseInt(document.getElementById('id').value);
-                document.getElementById('id').value = (currentId + 1).toString();
-                document.getElementById('lastGadgetId').textContent = currentId.toString();
-                document.getElementById('nextGadgetId').textContent = (currentId + 1).toString();
-                
-                // Switch back to basic tab
-                switchTab('basic');
-            } catch (error) {
-                showStatus(`Error submitting gadget: ${error.message}`, 'error');
-                console.error('Error details:', error);
-                
-                // Show more detailed error in response area
-                const responseArea = document.getElementById('responseArea');
-                responseArea.textContent = `Error: ${error.message}\n\n${error.stack || ''}`;
-                responseArea.style.display = 'block';
-            }
+       async function handleSubmit() {
+    const statusDiv = document.getElementById('status');
+    statusDiv.style.display = 'none';
+    statusDiv.className = 'status';
+    document.getElementById('responseArea').style.display = 'none';
+
+    const repoOwner = document.getElementById('repoOwner').value;
+    const repoName = document.getElementById('repoName').value;
+    const branchName = document.getElementById('branchName').value;
+    const token = document.getElementById('token').value;
+
+    if (!repoOwner || !repoName || !branchName || !token) {
+        showStatus('Please fill in all GitHub repository fields.', 'error');
+        return;
+    }
+
+    // Gather basic gadget data
+    const gadgetData = {
+        id: parseInt(document.getElementById('id').value),
+        name: document.getElementById('name').value,
+        brand: document.getElementById('brand').value,
+        price: document.getElementById('price').value,
+        category: document.getElementById('category').value,
+        description: document.getElementById('description').value,
+        image: document.getElementById('image').value.trim(),
+        rating: parseFloat(document.getElementById('rating').value)
+    };
+
+    // Gather extended description data
+    const descriptionData = {
+        id: parseInt(document.getElementById('id').value),
+        extendedDescription: document.getElementById('extendedDescription').value,
+        specifications: specifications.filter(spec => spec.name && spec.value)
+    };
+
+    // Validate fields
+    for (const [key, value] of Object.entries(gadgetData)) {
+        if (!value && value !== 0) {
+            showStatus(`Please fill in the ${key} field.`, 'error');
+            switchTab('basic');
+            return;
         }
+    }
+
+    if (!descriptionData.extendedDescription) {
+        showStatus('Please fill in the extended description.', 'error');
+        switchTab('extended');
+        return;
+    }
+
+    if (descriptionData.specifications.length === 0) {
+        showStatus('Please add at least one specification.', 'error');
+        switchTab('extended');
+        return;
+    }
+
+    try {
+        // Check if the image exists
+        showStatus('Checking if image exists...', 'info');
+        const imageResponse = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/${gadgetData.image}?ref=${branchName}`, {
+            headers: {
+                'Authorization': `token ${token}`,
+                'Accept': 'application/vnd.github.v3+json'
+            }
+        });
+
+        if (imageResponse.status !== 200) {
+            showStatus('The specified image does not exist in the repository. Please upload it first.', 'warning');
+            document.getElementById('imageUploadArea').style.display = 'block';
+            switchTab('basic');
+            return;
+        }
+
+        // Update gadgets.json
+        showStatus('Updating gadgets.json...', 'info');
+
+        let gadgetsContent = [];
+        let gadgetsSha = null;
+
+        try {
+            const gadgetsResponse = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/gadgets.json?ref=${branchName}`, {
+                headers: {
+                    'Authorization': `token ${token}`,
+                    'Accept': 'application/vnd.github.v3+json'
+                }
+            });
+
+            if (gadgetsResponse.status === 200) {
+                const gadgetsData = await gadgetsResponse.json();
+                gadgetsSha = gadgetsData.sha;
+                const content = gadgetsData.content.replace(/\\n/g, '');
+                gadgetsContent = JSON.parse(decodeBase64(content));
+                if (!Array.isArray(gadgetsContent)) {
+                    gadgetsContent = [gadgetsContent];
+                }
+            }
+        } catch (error) {
+            console.warn('gadgets.json not found, starting new.');
+        }
+
+        const existingIndex = gadgetsContent.findIndex(g => parseInt(g.id) === gadgetData.id);
+        if (existingIndex >= 0) {
+            const confirmReplace = confirm(`A gadget with ID ${gadgetData.id} already exists. Do you want to replace it?`);
+            if (!confirmReplace) {
+                showStatus('Submission cancelled. Please choose a different ID.', 'warning');
+                return;
+            }
+            gadgetsContent[existingIndex] = gadgetData;
+        } else {
+            gadgetsContent.push(gadgetData);
+        }
+
+        gadgetsContent.sort((a, b) => parseInt(a.id) - parseInt(b.id));
+
+        const gadgetsPayload = {
+            message: `Update gadgets.json with ${gadgetData.name}`,
+            content: encodeBase64(JSON.stringify(gadgetsContent, null, 2)),
+            branch: branchName
+        };
+
+        if (gadgetsSha) {
+            gadgetsPayload.sha = gadgetsSha;
+        }
+
+        const gadgetsUpdateResponse = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/gadgets.json`, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `token ${token}`,
+                'Accept': 'application/vnd.github.v3+json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(gadgetsPayload)
+        });
+
+        if (!gadgetsUpdateResponse.ok) {
+            const gadgetsError = await gadgetsUpdateResponse.json();
+            throw new Error(`Failed to update gadgets.json: ${gadgetsError.message}`);
+        }
+
+        // ✅ Update gadgets-description.json (NEW)
+        showStatus('Updating gadgets-description.json...', 'info');
+
+        let descriptionsContent = [];
+        let descriptionsSha = null;
+
+        try {
+            const descResponse = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/gadgets-description.json?ref=${branchName}`, {
+                headers: {
+                    'Authorization': `token ${token}`,
+                    'Accept': 'application/vnd.github.v3+json'
+                }
+            });
+
+            if (descResponse.status === 200) {
+                const descData = await descResponse.json();
+                descriptionsSha = descData.sha;
+                const decodedDesc = decodeBase64(descData.content.replace(/\\n/g, ''));
+                descriptionsContent = JSON.parse(decodedDesc);
+                if (!Array.isArray(descriptionsContent)) {
+                    descriptionsContent = [descriptionsContent];
+                }
+            }
+        } catch (error) {
+            console.warn('gadgets-description.json not found, starting new.');
+        }
+
+        const descIndex = descriptionsContent.findIndex(d => d.id === descriptionData.id);
+        if (descIndex >= 0) {
+            descriptionsContent[descIndex] = descriptionData;
+        } else {
+            descriptionsContent.push(descriptionData);
+        }
+
+        descriptionsContent.sort((a, b) => a.id - b.id);
+
+        const descPayload = {
+            message: `Update gadgets-description.json with extended description for ${gadgetData.name}`,
+            content: encodeBase64(JSON.stringify(descriptionsContent, null, 2)),
+            branch: branchName
+        };
+
+        if (descriptionsSha) {
+            descPayload.sha = descriptionsSha;
+        }
+
+        const descUpdateResponse = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/gadgets-description.json`, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `token ${token}`,
+                'Accept': 'application/vnd.github.v3+json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(descPayload)
+        });
+
+        if (!descUpdateResponse.ok) {
+            const errorData = await descUpdateResponse.json();
+            throw new Error(`Failed to update gadgets-description.json: ${errorData.message}`);
+        }
+
+        showStatus(`Successfully added/updated gadget "${gadgetData.name}" to GitHub!`, 'success');
+
+        // Reset form
+        document.getElementById('name').value = '';
+        document.getElementById('brand').value = '';
+        document.getElementById('price').value = '';
+        document.getElementById('category').selectedIndex = 0;
+        document.getElementById('description').value = '';
+        document.getElementById('extendedDescription').value = '';
+        document.getElementById('rating').value = '';
+        document.getElementById('image').value = '';
+        document.getElementById('imagePreview').style.display = 'none';
+        specifications = [];
+        document.getElementById('specificationsContainer').innerHTML = '';
+
+        const currentId = parseInt(document.getElementById('id').value);
+        document.getElementById('id').value = (currentId + 1).toString();
+        document.getElementById('lastGadgetId').textContent = currentId.toString();
+        document.getElementById('nextGadgetId').textContent = (currentId + 1).toString();
+
+        switchTab('basic');
+
+    } catch (error) {
+        showStatus(`Error submitting gadget: ${error.message}`, 'error');
+        console.error('Error details:', error);
+
+        const responseArea = document.getElementById('responseArea');
+        responseArea.textContent = `Error: ${error.message}\n\n${error.stack || ''}`;
+        responseArea.style.display = 'block';
+    }
+}
+
         
         // Event listeners
         document.addEventListener('DOMContentLoaded', function() {
