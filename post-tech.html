@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gadget Management System</title>
     <style>
-        /* CSS styles remain unchanged */
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
             max-width: 1000px;
@@ -348,14 +347,67 @@
     </div>
 
     <script>
+        // Global variables
         let specifications = [];
-
-        // Fixed Base64 functions that use built-in browser methods
-        function safeBase64Encode(str) {
-            // Use built-in btoa but handle Unicode properly
+        
+        // Switch between tabs
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.style.display = 'none');
+            
+            if (tabName === 'basic') {
+                document.querySelector('.tab:nth-child(1)').classList.add('active');
+                document.getElementById('basic-tab').style.display = 'block';
+            } else if (tabName === 'extended') {
+                document.querySelector('.tab:nth-child(2)').classList.add('active');
+                document.getElementById('extended-tab').style.display = 'block';
+            }
+        }
+        
+        // Add specification field
+        function addSpecification() {
+            const specId = specifications.length;
+            specifications.push({ name: '', value: '' });
+            
+            const specContainer = document.getElementById('specificationsContainer');
+            const specGroup = document.createElement('div');
+            specGroup.className = 'spec-group';
+            specGroup.dataset.specId = specId;
+            
+            specGroup.innerHTML = `
+                <label>Specification</label>
+                <div class="spec-inputs">
+                    <input type="text" placeholder="Name (e.g., RAM)" onchange="updateSpec(${specId}, 'name', this.value)">
+                    <input type="text" placeholder="Value (e.g., 8GB)" onchange="updateSpec(${specId}, 'value', this.value)">
+                    <button type="button" class="remove-spec" onclick="removeSpec(${specId})">Remove</button>
+                </div>
+            `;
+            
+            specContainer.appendChild(specGroup);
+        }
+        
+        // Update specification value
+        function updateSpec(id, field, value) {
+            if (specifications[id]) {
+                specifications[id][field] = value;
+            }
+        }
+        
+        // Remove specification
+        function removeSpec(id) {
+            const specGroup = document.querySelector(`.spec-group[data-spec-id="${id}"]`);
+            if (specGroup) {
+                specGroup.remove();
+                specifications[id] = { name: '', value: '' }; // Keep array indices intact
+            }
+        }
+        
+        // Improved Base64 functions with better error handling
+        function encodeBase64(str) {
             try {
                 // First encode the string as UTF-8
-                const utf8Bytes = new TextEncoder().encode(str);
+                const utf8Encoder = new TextEncoder();
+                const utf8Bytes = utf8Encoder.encode(str);
                 
                 // Convert UTF-8 bytes to binary string (required for btoa)
                 let binaryString = '';
@@ -367,228 +419,351 @@
                 return btoa(binaryString);
             } catch (e) {
                 console.error("Base64 encoding error:", e);
-                
-                // Fallback method for older browsers
-                const base64chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
-                let result = '';
-                const utf8Bytes = new TextEncoder().encode(str);
-                
-                for (let i = 0; i < utf8Bytes.length; i += 3) {
-                    const chunk = (utf8Bytes[i] << 16) | 
-                                 ((i + 1 < utf8Bytes.length) ? utf8Bytes[i + 1] << 8 : 0) | 
-                                 ((i + 2 < utf8Bytes.length) ? utf8Bytes[i + 2] : 0);
-                    
-                    result += base64chars[(chunk >> 18) & 63];
-                    result += base64chars[(chunk >> 12) & 63];
-                    result += (i + 1 < utf8Bytes.length) ? base64chars[(chunk >> 6) & 63] : '=';
-                    result += (i + 2 < utf8Bytes.length) ? base64chars[chunk & 63] : '=';
-                }
-                
-                return result;
+                showStatus("Error encoding data to Base64. Please check for invalid characters.", "error");
+                throw new Error("Base64 encoding failed: " + e.message);
             }
         }
         
-        function safeBase64Decode(base64) {
-        if (!base64 || typeof base64 !== 'string') {
-            throw new Error("Invalid input: not a string.");
+        function decodeBase64(base64) {
+            try {
+                if (!base64 || typeof base64 !== 'string') {
+                    throw new Error("Invalid input: not a string");
+                }
+                
+                // Remove whitespace and any non-base64 characters
+                base64 = base64.replace(/[\r\n\t\s]/g, '').replace(/^[^,]*,/, '');
+                
+                // Add padding if necessary
+                while (base64.length % 4 !== 0) {
+                    base64 += '=';
+                }
+                
+                // First use browser's atob to get binary string
+                const binaryString = atob(base64);
+                
+                // Convert binary string to UTF-8 array
+                const bytes = new Uint8Array(binaryString.length);
+                for (let i = 0; i < binaryString.length; i++) {
+                    bytes[i] = binaryString.charCodeAt(i);
+                }
+                
+                // Decode UTF-8 array to string
+                const decoder = new TextDecoder('utf-8');
+                return decoder.decode(bytes);
+            } catch (e) {
+                console.error("Base64 decoding error:", e);
+                showStatus("Error decoding Base64 data. The data may be corrupted.", "error");
+                throw new Error("Base64 decoding failed: " + e.message);
+            }
         }
-
-        base64 = base64.replace(/[^A-Za-z0-9\+\/=]/g, '');
-        const padding = base64.length % 4;
-        if (padding === 1) {
-            throw new Error("Invalid base64 input length.");
-        }
-        base64 += "=".repeat((4 - base64.length % 4) % 4);
-
-        const raw = atob(base64);
-        const encoder = new TextEncoder();
-        const bytes = new Uint8Array([...raw].map(c => c.charCodeAt(0)));
-        const decoder = new TextDecoder();
-        return decoder.decode(bytes);
-    }
         
-        document.addEventListener('DOMContentLoaded', function() {
-            const submitBtn = document.getElementById('submitBtn');
-            const loadDataBtn = document.getElementById('loadDataBtn');
-            const checkImageBtn = document.getElementById('checkImageBtn');
-            const uploadImageBtn = document.getElementById('uploadImageBtn');
+        // Show status messages
+        function showStatus(message, type) {
             const statusDiv = document.getElementById('status');
-            const responseArea = document.getElementById('responseArea');
-            const idInfoDiv = document.getElementById('idInfo');
-            const lastGadgetIdSpan = document.getElementById('lastGadgetId');
-            const nextGadgetIdSpan = document.getElementById('nextGadgetId');
-            const logoutBtn = document.getElementById('logoutBtn');
-            const imageUploadArea = document.getElementById('imageUploadArea');
-            const imagePreview = document.getElementById('imagePreview');
+            statusDiv.textContent = message;
+            statusDiv.className = 'status ' + type;
+            statusDiv.style.display = 'block';
             
-            // Logout button functionality
-            logoutBtn.addEventListener('click', function() {
-                localStorage.removeItem('loggedIn');
-                localStorage.removeItem('username');
-                sessionStorage.removeItem('loggedIn');
-                sessionStorage.removeItem('username');
-                window.location.href = 'index.html';
-            });
-
-            // Prevent accessing gadget-management-form.html after logout
-            if (!localStorage.getItem('loggedIn') && !sessionStorage.getItem('loggedIn')) {
-                window.location.href = 'index.html';
+            // Auto-hide success messages after 5 seconds
+            if (type === 'success') {
+                setTimeout(() => {
+                    statusDiv.style.display = 'none';
+                }, 5000);
+            }
+        }
+        
+        // Load existing data from GitHub repository
+        async function loadExistingData() {
+            const repoOwner = document.getElementById('repoOwner').value;
+            const repoName = document.getElementById('repoName').value;
+            const branchName = document.getElementById('branchName').value;
+            const token = document.getElementById('token').value;
+            
+            if (!repoOwner || !repoName || !branchName || !token) {
+                showStatus('Please fill in all GitHub repository fields.', 'error');
+                return;
             }
             
-            // Initialize with one specification
-            addSpecification();
+            showStatus('Loading existing data...', 'info');
             
-            // Event listeners
-            loadDataBtn.addEventListener('click', loadExistingData);
-            checkImageBtn.addEventListener('click', checkImageExists);
-            uploadImageBtn.addEventListener('click', uploadImage);
-            submitBtn.addEventListener('click', handleSubmit);
-            
-            // Check if image exists in the repository
-            async function checkImageExists() {
-                const repoOwner = document.getElementById('repoOwner').value;
-                const repoName = document.getElementById('repoName').value;
-                const branchName = document.getElementById('branchName').value;
-                const token = document.getElementById('token').value;
-                const imagePath = document.getElementById('image').value.trim();
+            try {
+                // Try to load gadgets.json
+                const gadgetsResponse = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/gadgets.json?ref=${branchName}`, {
+                    headers: {
+                        'Authorization': `token ${token}`,
+                        'Accept': 'application/vnd.github.v3+json'
+                    }
+                });
                 
-                if (!repoOwner || !repoName || !branchName || !token || !imagePath) {
-                    showStatus('Please fill in all GitHub repository fields and image path.', 'error');
-                    return;
+                let highestId = 0;
+                let gadgetsCount = 0;
+                
+                if (gadgetsResponse.status === 200) {
+                    const gadgetsData = await gadgetsResponse.json();
+                    
+                    try {
+                        const content = gadgetsData.content.replace(/\\n/g, '');
+                        const gadgetsContent = JSON.parse(decodeBase64(content));
+                        
+                        gadgetsCount = Array.isArray(gadgetsContent) ? gadgetsContent.length : 1;
+                        
+                        if (Array.isArray(gadgetsContent)) {
+                            gadgetsContent.forEach(gadget => {
+                                const gadgetId = parseInt(gadget.id, 10);
+                                if (!isNaN(gadgetId) && gadgetId > highestId) {
+                                    highestId = gadgetId;
+                                }
+                            });
+                        } else if (gadgetsContent.id) {
+                            highestId = parseInt(gadgetsContent.id, 10) || 0;
+                        }
+                    } catch (decodeError) {
+                        console.error('Error decoding JSON data:', decodeError);
+                        showStatus(`Error decoding JSON data. Try recreating the gadgets.json file.`, 'error');
+                        return;
+                    }
+                } else if (gadgetsResponse.status === 404) {
+                    showStatus('No existing gadgets.json file found. Starting with ID 1.', 'info');
+                } else {
+                    throw new Error(`Failed to load data: ${gadgetsResponse.statusText}`);
                 }
                 
-                showStatus('Checking if image exists...', 'info');
-                imageUploadArea.style.display = 'none';
-                imagePreview.style.display = 'none';
+                // Update ID info
+                document.getElementById('lastGadgetId').textContent = highestId > 0 ? highestId.toString() : 'None';
+                document.getElementById('nextGadgetId').textContent = (highestId + 1).toString();
+                document.getElementById('id').value = (highestId + 1).toString();
+                document.getElementById('idInfo').style.display = 'block';
                 
-                try {
-                    const imageResponse = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/${imagePath}?ref=${branchName}`, {
-                        headers: {
-                            'Authorization': `token ${token}`,
-                            'Accept': 'application/vnd.github.v3+json'
-                        }
-                    });
-                    
-                    if (imageResponse.status === 200) {
-                        const imageData = await imageResponse.json();
-                        
-                        if (imageData.type === 'file' && imageData.name.match(/\.(jpe?g|png|gif|svg|webp)$/i)) {
-                            showStatus('Image found in repository!', 'success');
-                            
-                            const imageUrl = `https://raw.githubusercontent.com/${repoOwner}/${repoName}/${branchName}/${imagePath}`;
-                            imagePreview.src = imageUrl;
-                            imagePreview.style.display = 'block';
-                        } else {
-                            showStatus('The path exists but is not an image file.', 'warning');
-                            imageUploadArea.style.display = 'block';
-                        }
-                    } else if (imageResponse.status === 404) {
-                        showStatus('Image not found in repository.', 'warning');
-                        imageUploadArea.style.display = 'block';
-                    } else {
-                        throw new Error(`Failed to check image: ${imageResponse.statusText}`);
-                    }
-                } catch (error) {
-                    showStatus(`Error checking image: ${error.message}`, 'error');
+                if (gadgetsCount > 0) {
+                    showStatus(`Loaded ${gadgetsCount} existing gadgets. Ready to add new gadget.`, 'success');
+                }
+            } catch (error) {
+                if (error.message.includes('404')) {
+                    document.getElementById('lastGadgetId').textContent = 'None';
+                    document.getElementById('nextGadgetId').textContent = '1';
+                    document.getElementById('id').value = '1';
+                    document.getElementById('idInfo').style.display = 'block';
+                    showStatus('No existing gadgets found. Starting with ID 1.', 'info');
+                } else {
+                    showStatus(`Error loading data: ${error.message}`, 'error');
                     console.error('Error details:', error);
                 }
             }
+        }
+        
+        // Check if image exists in the repository
+        async function checkImageExists() {
+            const repoOwner = document.getElementById('repoOwner').value;
+            const repoName = document.getElementById('repoName').value;
+            const branchName = document.getElementById('branchName').value;
+            const token = document.getElementById('token').value;
+            const imagePath = document.getElementById('image').value.trim();
             
-            // Upload image to the repository
-            async function uploadImage() {
-        const repoOwner = document.getElementById('repoOwner').value;
-        const repoName = document.getElementById('repoName').value;
-        const branchName = document.getElementById('branchName').value;
-        const token = document.getElementById('token').value;
-        const imagePath = document.getElementById('image').value.trim();
-        const imageFile = document.getElementById('imageFile').files[0];
-
-        if (!repoOwner || !repoName || !branchName || !token || !imagePath) {
-            showStatus('Please fill in all GitHub repository fields and image path.', 'error');
-            return;
-        }
-
-        if (!imageFile) {
-            showStatus('Please select an image file to upload.', 'error');
-            return;
-        }
-
-        showStatus('Uploading image...', 'info');
-
-        try {
-            const reader = new FileReader();
-
-            reader.onload = async function () {
-                if (!reader.result) {
-                    showStatus('Error: Could not read image file.', 'error');
-                    return;
-                }
-
-                try {
-                    const base64Content = reader.result.split(',')[1];
-                    if (!/^[A-Za-z0-9+/=\r\n]+$/.test(base64Content)) {
-                        throw new Error('Generated content is not valid Base64');
+            if (!repoOwner || !repoName || !branchName || !token || !imagePath) {
+                showStatus('Please fill in all GitHub repository fields and image path.', 'error');
+                return;
+            }
+            
+            showStatus('Checking if image exists...', 'info');
+            document.getElementById('imageUploadArea').style.display = 'none';
+            document.getElementById('imagePreview').style.display = 'none';
+            
+            try {
+                const imageResponse = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/${imagePath}?ref=${branchName}`, {
+                    headers: {
+                        'Authorization': `token ${token}`,
+                        'Accept': 'application/vnd.github.v3+json'
                     }
-
-                    const payload = {
-                        message: `Add product image for ${document.getElementById('name').value || 'gadget'}`,
-                        content: base64Content,
-                        branch: branchName
-                    };
-
-                    const uploadResponse = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/${imagePath}`, {
-                        method: 'PUT',
-                        headers: {
-                            'Authorization': `token ${token}`,
-                            'Accept': 'application/vnd.github.v3+json',
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(payload)
-                    });
-
-                    const uploadData = await uploadResponse.json();
-
-                    if (uploadResponse.status === 200 || uploadResponse.status === 201) {
-                        showStatus('Image successfully uploaded to GitHub!', 'success');
+                });
+                
+                if (imageResponse.status === 200) {
+                    const imageData = await imageResponse.json();
+                    
+                    if (imageData.type === 'file' && imageData.name.match(/\.(jpe?g|png|gif|svg|webp)$/i)) {
+                        showStatus('Image found in repository!', 'success');
+                        
                         const imageUrl = `https://raw.githubusercontent.com/${repoOwner}/${repoName}/${branchName}/${imagePath}`;
-                        document.getElementById('imagePreview').src = imageUrl;
-                        document.getElementById('imagePreview').style.display = 'block';
-                        document.getElementById('imageUploadArea').style.display = 'none';
+                        const imgElement = document.getElementById('imagePreview');
+                        imgElement.src = imageUrl;
+                        imgElement.style.display = 'block';
                     } else {
-                        throw new Error(uploadData.message || 'Failed to upload image.');
+                        showStatus('The path exists but is not a recognized image file.', 'warning');
+                        document.getElementById('imageUploadArea').style.display = 'block';
                     }
-                } catch (error) {
-                    console.error('Upload error:', error);
-                    showStatus('Error uploading image: ' + error.message, 'error');
+                } else if (imageResponse.status === 404) {
+                    showStatus('Image not found in repository.', 'warning');
+                    document.getElementById('imageUploadArea').style.display = 'block';
+                } else {
+                    throw new Error(`Failed to check image: ${imageResponse.statusText}`);
                 }
-            };
-
-            reader.onerror = function () {
-                showStatus('Error reading image file.', 'error');
-            };
-
-            reader.readAsDataURL(imageFile);
-        } catch (error) {
-            showStatus(`Unexpected error: ${error.message}`, 'error');
-            console.error('Unexpected error:', error);
+            } catch (error) {
+                showStatus(`Error checking image: ${error.message}`, 'error');
+                console.error('Error details:', error);
+            }
         }
-    }
+        
+        // Upload image to the repository
+        async function uploadImage() {
+            const repoOwner = document.getElementById('repoOwner').value;
+            const repoName = document.getElementById('repoName').value;
+            const branchName = document.getElementById('branchName').value;
+            const token = document.getElementById('token').value;
+            const imagePath = document.getElementById('image').value.trim();
+            const imageFile = document.getElementById('imageFile').files[0];
             
-            async function loadExistingData() {
-                const repoOwner = document.getElementById('repoOwner').value;
-                const repoName = document.getElementById('repoName').value;
-                const branchName = document.getElementById('branchName').value;
-                const token = document.getElementById('token').value;
+            if (!repoOwner || !repoName || !branchName || !token || !imagePath) {
+                showStatus('Please fill in all GitHub repository fields and image path.', 'error');
+                return;
+            }
+            
+            if (!imageFile) {
+                showStatus('Please select an image file to upload.', 'error');
+                return;
+            }
+            
+            showStatus('Uploading image...', 'info');
+            
+            try {
+                // Read the file as a data URL
+                const reader = new FileReader();
                 
-                if (!repoOwner || !repoName || !branchName || !token) {
-                    showStatus('Please fill in all GitHub repository fields.', 'error');
+                reader.onload = async function() {
+                    try {
+                        // Get the base64 part of the data URL
+                        const base64Content = reader.result.split(',')[1];
+                        
+                        // Validate base64 content
+                        if (!base64Content || !/^[A-Za-z0-9+/=]+$/.test(base64Content)) {
+                            throw new Error('Generated content is not valid Base64');
+                        }
+                        
+                        const payload = {
+                            message: `Add product image for ${document.getElementById('name').value || 'gadget'}`,
+                            content: base64Content,
+                            branch: branchName
+                        };
+                        
+                        const uploadResponse = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/${imagePath}`, {
+                            method: 'PUT',
+                            headers: {
+                                'Authorization': `token ${token}`,
+                                'Accept': 'application/vnd.github.v3+json',
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(payload)
+                        });
+                        
+                        if (uploadResponse.ok) {
+                            const uploadData = await uploadResponse.json();
+                            showStatus('Image successfully uploaded to GitHub!', 'success');
+                            
+                            const imageUrl = `https://raw.githubusercontent.com/${repoOwner}/${repoName}/${branchName}/${imagePath}`;
+                            const imgElement = document.getElementById('imagePreview');
+                            imgElement.src = imageUrl;
+                            imgElement.style.display = 'block';
+                            document.getElementById('imageUploadArea').style.display = 'none';
+                        } else {
+                            const errorData = await uploadResponse.json();
+                            throw new Error(errorData.message || 'Failed to upload image');
+                        }
+                    } catch (error) {
+                        showStatus(`Error uploading image: ${error.message}`, 'error');
+                        console.error('Upload error:', error);
+                    }
+                };
+                
+                reader.onerror = function() {
+                    showStatus('Error reading image file.', 'error');
+                };
+                
+                reader.readAsDataURL(imageFile);
+            } catch (error) {
+                showStatus(`Unexpected error: ${error.message}`, 'error');
+                console.error('Unexpected error:', error);
+            }
+        }
+        
+        // Submit gadget data to GitHub
+        async function handleSubmit() {
+            const statusDiv = document.getElementById('status');
+            statusDiv.style.display = 'none';
+            statusDiv.className = 'status';
+            document.getElementById('responseArea').style.display = 'none';
+            
+            const repoOwner = document.getElementById('repoOwner').value;
+            const repoName = document.getElementById('repoName').value;
+            const branchName = document.getElementById('branchName').value;
+            const token = document.getElementById('token').value;
+            
+            if (!repoOwner || !repoName || !branchName || !token) {
+                showStatus('Please fill in all GitHub repository fields.', 'error');
+                return;
+            }
+            
+            // Gather basic gadget data
+            const gadgetData = {
+                id: parseInt(document.getElementById('id').value),
+                name: document.getElementById('name').value,
+                brand: document.getElementById('brand').value,
+                price: document.getElementById('price').value,
+                category: document.getElementById('category').value,
+                description: document.getElementById('description').value,
+                image: document.getElementById('image').value.trim(),
+                rating: parseFloat(document.getElementById('rating').value)
+            };
+            
+            // Gather extended description data
+            const descriptionData = {
+                id: parseInt(document.getElementById('id').value),
+                extendedDescription: document.getElementById('extendedDescription').value,
+                specifications: specifications.filter(spec => spec.name && spec.value)
+            };
+            
+            // Validate required fields
+            for (const [key, value] of Object.entries(gadgetData)) {
+                if (!value && value !== 0) {
+                    showStatus(`Please fill in the ${key} field.`, 'error');
+                    switchTab('basic');
+                    return;
+                }
+            }
+            
+            if (!descriptionData.extendedDescription) {
+                showStatus('Please fill in the extended description.', 'error');
+                switchTab('extended');
+                return;
+            }
+            
+            if (descriptionData.specifications.length === 0) {
+                showStatus('Please add at least one specification.', 'error');
+                switchTab('extended');
+                return;
+            }
+            
+            try {
+                // Check if the image exists first
+                showStatus('Checking if image exists...', 'info');
+                const imageResponse = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/${gadgetData.image}?ref=${branchName}`, {
+                    headers: {
+                        'Authorization': `token ${token}`,
+                        'Accept': 'application/vnd.github.v3+json'
+                    }
+                });
+                
+                if (imageResponse.status !== 200) {
+                    showStatus('The specified image does not exist in the repository. Please upload it first.', 'warning');
+                    document.getElementById('imageUploadArea').style.display = 'block';
+                    switchTab('basic');
                     return;
                 }
                 
-                showStatus('Loading existing data...', 'info');
+                // Update gadgets.json
+                showStatus('Updating gadgets.json...', 'info');
+                
+                let gadgetsContent = [];
+                let gadgetsSha = null;
                 
                 try {
-                    // Load gadgets.json
                     const gadgetsResponse = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/gadgets.json?ref=${branchName}`, {
                         headers: {
                             'Authorization': `token ${token}`,
@@ -596,158 +771,216 @@
                         }
                     });
                     
-                    let highestId = 0;
-                    let gadgetsCount = 0;
-                    
-                    if (gadgetsResponse.status === 200) {
-                        const gadgetsData = await gadgetsResponse.json();
+                    if (gadgetsResponse.status === 200) {const gadgetsData = await gadgetsResponse.json();
+                        gadgetsSha = gadgetsData.sha;
                         
                         try {
-                            // Use our safe decoder with better error handling
-                            const gadgetsContent = JSON.parse(safeBase64Decode(gadgetsData.content));
-                            gadgetsCount = Array.isArray(gadgetsContent) ? gadgetsContent.length : 1;
+                            const content = gadgetsData.content.replace(/\\n/g, '');
+                            gadgetsContent = JSON.parse(decodeBase64(content));
                             
-                            if (Array.isArray(gadgetsContent)) {
-                                gadgetsContent.forEach(gadget => {
-                                    const gadgetId = parseInt(gadget.id, 10);
-                                    if (!isNaN(gadgetId) && gadgetId > highestId) {
-                                        highestId = gadgetId;
-                                    }
-                                });
-                            } else if (gadgetsContent.id) {
-                                highestId = parseInt(gadgetsContent.id, 10) || 0;
+                            if (!Array.isArray(gadgetsContent)) {
+                                gadgetsContent = [gadgetsContent];
                             }
                         } catch (decodeError) {
-                            showStatus(`Error decoding JSON data: ${decodeError.message}. Try recreating the gadgets.json file.`, 'error');
-                            console.error('Decoding error details:', decodeError);
-                            return;
+                            console.error('Error decoding JSON data:', decodeError);
+                            throw new Error('Failed to parse existing gadgets.json file.');
                         }
                     }
-                    
-                    // Update ID info
-                    lastGadgetIdSpan.textContent = highestId > 0 ? highestId.toString() : 'None';
-                    nextGadgetIdSpan.textContent = (highestId + 1).toString();
-                    document.getElementById('id').value = (highestId + 1).toString();
-                    idInfoDiv.style.display = 'block';
-                    
-                    showStatus(`Loaded ${gadgetsCount} existing gadgets. Ready to add new gadget.`, 'success');
                 } catch (error) {
-                    // If the file doesn't exist, it's not an error - just start with ID 1
-                    if (error.message.includes('404')) {
-                        lastGadgetIdSpan.textContent = 'None';
-                        nextGadgetIdSpan.textContent = '1';
-                        document.getElementById('id').value = '1';
-                        idInfoDiv.style.display = 'block';
-                        showStatus('No existing gadgets found. Starting with ID 1.', 'info');
-                    } else {
-                        showStatus(`Error loading data: ${error.message}`, 'error');
-                        console.error('Error details:', error);
-                    }
-                }
-            }
-            
-            async function handleSubmit() {
-                statusDiv.style.display = 'none';
-                statusDiv.className = 'status';
-                responseArea.style.display = 'none';
-                
-                const repoOwner = document.getElementById('repoOwner').value;
-                const repoName = document.getElementById('repoName').value;
-                const branchName = document.getElementById('branchName').value;
-                const token = document.getElementById('token').value;
-                
-                if (!repoOwner || !repoName || !branchName || !token) {
-                    showStatus('Please fill in all GitHub repository fields.', 'error');
-                    return;
+                    console.error('Error fetching gadgets.json:', error);
+                    // If file doesn't exist, we'll create it
                 }
                 
-                // Get basic gadget data
-                const gadgetData = {
-                    id: parseInt(document.getElementById('id').value),
-                    name: document.getElementById('name').value,
-                    brand: document.getElementById('brand').value,
-                    price: document.getElementById('price').value,
-                    category: document.getElementById('category').value,
-                    description: document.getElementById('description').value,
-                    image: document.getElementById('image').value.trim(),
-                    rating: parseFloat(document.getElementById('rating').value)
-                };
-                
-                // Get extended description data
-                const descriptionData = {
-                    id: parseInt(document.getElementById('id').value),
-                    extendedDescription: document.getElementById('extendedDescription').value,
-                    specifications: specifications.filter(spec => spec.name && spec.value)
-                };
-                
-                // Validate data
-                for (const [key, value] of Object.entries(gadgetData)) {
-                    if (!value && value !== 0) {
-                        showStatus(`Please fill in the ${key} field.`, 'error');
+                // Check if gadget with same ID already exists
+                const existingIndex = gadgetsContent.findIndex(g => parseInt(g.id) === gadgetData.id);
+                if (existingIndex >= 0) {
+                    const confirmReplace = confirm(`A gadget with ID ${gadgetData.id} already exists. Do you want to replace it?`);
+                    if (!confirmReplace) {
+                        showStatus('Submission cancelled. Please choose a different ID.', 'warning');
                         return;
                     }
+                    gadgetsContent[existingIndex] = gadgetData;
+                } else {
+                    gadgetsContent.push(gadgetData);
                 }
                 
-                if (!descriptionData.extendedDescription) {
-                    showStatus('Please fill in the extended description.', 'error');
-                    return;
+                // Sort by ID for better organization
+                gadgetsContent.sort((a, b) => parseInt(a.id) - parseInt(b.id));
+                
+                // Update or create gadgets.json
+                const gadgetsPayload = {
+                    message: `Update gadgets.json with ${gadgetData.name}`,
+                    content: encodeBase64(JSON.stringify(gadgetsContent, null, 2)),
+                    branch: branchName
+                };
+                
+                if (gadgetsSha) {
+                    gadgetsPayload.sha = gadgetsSha;
                 }
                 
-                if (descriptionData.specifications.length === 0) {
-                    showStatus('Please add at least one specification.', 'error');
-                    return;
+                const gadgetsUpdateResponse = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/gadgets.json`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `token ${token}`,
+                        'Accept': 'application/vnd.github.v3+json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(gadgetsPayload)
+                });
+                
+                if (!gadgetsUpdateResponse.ok) {
+                    const gadgetsError = await gadgetsUpdateResponse.json();
+                    throw new Error(`Failed to update gadgets.json: ${gadgetsError.message}`);
                 }
+                
+                // Create or update extended description file
+                showStatus('Adding extended description...', 'info');
+                
+                const descriptionFileName = `descriptions/gadget-${gadgetData.id}.json`;
+                let descriptionSha = null;
                 
                 try {
-                    // Check if image exists
-                    showStatus('Checking if image exists...', 'info');
-                    const imageResponse = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/${gadgetData.image}?ref=${branchName}`, {
+                    const descriptionResponse = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/${descriptionFileName}?ref=${branchName}`, {
                         headers: {
                             'Authorization': `token ${token}`,
                             'Accept': 'application/vnd.github.v3+json'
                         }
                     });
                     
-                    if (imageResponse.status !== 200) {
-                        showStatus('The specified image does not exist in the repository. Please upload it first.', 'warning');
-                        imageUploadArea.style.display = 'block';
-                        return;
+                    if (descriptionResponse.status === 200) {
+                        const descriptionData = await descriptionResponse.json();
+                        descriptionSha = descriptionData.sha;
                     }
+                } catch (error) {
+                    console.error('Error checking for existing description file:', error);
+                    // If file doesn't exist, we'll create it
+                }
+                
+                // Create descriptions directory if it doesn't exist
+                try {
+                    const dirResponse = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/descriptions?ref=${branchName}`, {
+                        headers: {
+                            'Authorization': `token ${token}`,
+                            'Accept': 'application/vnd.github.v3+json'
+                        }
+                    });
                     
-                    showStatus('Updating gadgets.json...', 'info');
-                    
-                    // Update gadgets.json
-                    let gadgetsContent = [];
-                    let gadgetsSha = null;
-                    
-                    try {
-                        const gadgetsResponse = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/gadgets.json?ref=${branchName}`, {
+                    if (dirResponse.status === 404) {
+                        const dirPayload = {
+                            message: 'Create descriptions directory',
+                            content: '',
+                            branch: branchName
+                        };
+                        
+                        await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/descriptions/.gitkeep`, {
+                            method: 'PUT',
                             headers: {
                                 'Authorization': `token ${token}`,
-                                'Accept': 'application/vnd.github.v3+json'
-                            }
+                                'Accept': 'application/vnd.github.v3+json',
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                ...dirPayload,
+                                content: encodeBase64('')
+                            })
                         });
-                        
-                        if (gadgetsResponse.status === 200) {
-                            const gadgetsFileData = await gadgetsResponse.json();
-                            gadgetsSha = gadgetsFileData.sha;
-                            
-                            try {
-                                // Use the safe decoder with better error handling
-                                gadgetsContent = JSON.parse(safeBase64Decode(gadgetsFileData.content));
-                                
-                                if (!Array.isArray(gadgetsContent)) {
-                                    gadgetsContent = [gadgetsContent];
-                                }
-                            } catch (decodeError) {
-                                showStatus(`Error decoding gadgets.json: ${decodeError.message}. Creating a new file.`, 'warning');
-                                gadgetsContent = [];
-                            }
-                        }
-                    } catch (error) {
-                        console.log('gadgets.json might not exist yet, creating new file');
                     }
-                    
-                    // Check for duplicate IDs
-                    const duplicateId = gadgetsContent.find(gadget => parseInt(gadget.id) === gadgetData.id);
-                    if (duplicateId)
+                } catch (error) {
+                    console.error('Error checking descriptions directory:', error);
+                }
+                
+                // Update or create description file
+                const descriptionPayload = {
+                    message: `Update extended description for ${gadgetData.name}`,
+                    content: encodeBase64(JSON.stringify(descriptionData, null, 2)),
+                    branch: branchName
+                };
+                
+                if (descriptionSha) {
+                    descriptionPayload.sha = descriptionSha;
+                }
+                
+                const descriptionUpdateResponse = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/${descriptionFileName}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `token ${token}`,
+                        'Accept': 'application/vnd.github.v3+json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(descriptionPayload)
+                });
+                
+                if (!descriptionUpdateResponse.ok) {
+                    const descriptionError = await descriptionUpdateResponse.json();
+                    throw new Error(`Failed to update description file: ${descriptionError.message}`);
+                }
+                
+                showStatus(`Successfully added/updated gadget "${gadgetData.name}" to GitHub!`, 'success');
+                
+                // Reset the form
+                document.getElementById('name').value = '';
+                document.getElementById('brand').value = '';
+                document.getElementById('price').value = '';
+                document.getElementById('category').selectedIndex = 0;
+                document.getElementById('description').value = '';
+                document.getElementById('extendedDescription').value = '';
+                document.getElementById('rating').value = '';
+                document.getElementById('image').value = '';
+                document.getElementById('imagePreview').style.display = 'none';
+                specifications = [];
+                document.getElementById('specificationsContainer').innerHTML = '';
+                
+                // Increment the ID field
+                const currentId = parseInt(document.getElementById('id').value);
+                document.getElementById('id').value = (currentId + 1).toString();
+                document.getElementById('lastGadgetId').textContent = currentId.toString();
+                document.getElementById('nextGadgetId').textContent = (currentId + 1).toString();
+                
+                // Switch back to basic tab
+                switchTab('basic');
+            } catch (error) {
+                showStatus(`Error submitting gadget: ${error.message}`, 'error');
+                console.error('Error details:', error);
+                
+                // Show more detailed error in response area
+                const responseArea = document.getElementById('responseArea');
+                responseArea.textContent = `Error: ${error.message}\n\n${error.stack || ''}`;
+                responseArea.style.display = 'block';
+            }
+        }
+        
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add initial spec field
+            addSpecification();
+            
+            // Load data button
+            document.getElementById('loadDataBtn').addEventListener('click', loadExistingData);
+            
+            // Check image button
+            document.getElementById('checkImageBtn').addEventListener('click', checkImageExists);
+            
+            // Upload image button
+            document.getElementById('uploadImageBtn').addEventListener('click', uploadImage);
+            
+            // Submit button
+            document.getElementById('submitBtn').addEventListener('click', handleSubmit);
+            
+            // Logout button
+            document.getElementById('logoutBtn').addEventListener('click', function() {
+                if (confirm('Are you sure you want to logout? This will clear all form data.')) {
+                    document.getElementById('token').value = '';
+                    document.getElementById('repoOwner').value = '';
+                    document.getElementById('repoName').value = '';
+                    document.getElementById('branchName').value = 'main';
+                    document.getElementById('idInfo').style.display = 'none';
+                    document.getElementById('status').style.display = 'none';
+                    document.getElementById('imagePreview').style.display = 'none';
+                    document.getElementById('imageUploadArea').style.display = 'none';
+                    showStatus('Logged out successfully.', 'info');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
