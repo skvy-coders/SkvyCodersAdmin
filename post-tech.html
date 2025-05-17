@@ -349,6 +349,19 @@
     <script>
         let specifications = [];
 
+        function utf8ToBase64(str) {
+            return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, function(match, p1) {
+                return String.fromCharCode('0x' + p1);
+            }));
+        }
+        
+        // Helper function to safely decode base64 to Unicode strings
+        function base64ToUtf8(str) {
+            return decodeURIComponent(atob(str).split('').map(function(c) {
+                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+            }).join(''));
+        }
+        
         document.addEventListener('DOMContentLoaded', function() {
             const submitBtn = document.getElementById('submitBtn');
             const loadDataBtn = document.getElementById('loadDataBtn');
@@ -535,7 +548,8 @@
                     
                     if (gadgetsResponse.status === 200) {
                         const gadgetsData = await gadgetsResponse.json();
-                        const gadgetsContent = JSON.parse(atob(gadgetsData.content));
+                        // Use the safe decoder
+                        const gadgetsContent = JSON.parse(base64ToUtf8(gadgetsData.content));
                         gadgetsCount = Array.isArray(gadgetsContent) ? gadgetsContent.length : 1;
                         
                         if (Array.isArray(gadgetsContent)) {
@@ -648,7 +662,8 @@
                         if (gadgetsResponse.status === 200) {
                             const gadgetsFileData = await gadgetsResponse.json();
                             gadgetsSha = gadgetsFileData.sha;
-                            gadgetsContent = JSON.parse(atob(gadgetsFileData.content));
+                            // Use the safe decoder
+                            gadgetsContent = JSON.parse(base64ToUtf8(gadgetsFileData.content));
                             
                             if (!Array.isArray(gadgetsContent)) {
                                 gadgetsContent = [gadgetsContent];
@@ -662,7 +677,8 @@
                     
                     const gadgetsPayload = {
                         message: `Add new gadget: ${gadgetData.name}`,
-                        content: btoa(JSON.stringify(gadgetsContent, null, 2)),
+                        // Use the safe encoder
+                        content: utf8ToBase64(JSON.stringify(gadgetsContent, null, 2)),
                         branch: branchName
                     };
                     
@@ -702,7 +718,8 @@
                         if (descriptionsResponse.status === 200) {
                             const descriptionsFileData = await descriptionsResponse.json();
                             descriptionsSha = descriptionsFileData.sha;
-                            descriptionsContent = JSON.parse(atob(descriptionsFileData.content));
+                            // Use the safe decoder
+                            descriptionsContent = JSON.parse(base64ToUtf8(descriptionsFileData.content));
                             
                             if (!Array.isArray(descriptionsContent)) {
                                 descriptionsContent = [descriptionsContent];
@@ -716,7 +733,8 @@
                     
                     const descriptionsPayload = {
                         message: `Add description for gadget: ${gadgetData.name}`,
-                        content: btoa(JSON.stringify(descriptionsContent, null, 2)),
+                        // Use the safe encoder
+                        content: utf8ToBase64(JSON.stringify(descriptionsContent, null, 2)),
                         branch: branchName
                     };
                     
@@ -755,7 +773,6 @@
                     console.error('Error details:', error);
                 }
             }
-            
             function clearForm() {
                 // Clear basic info (except ID)
                 document.getElementById('name').value = '';
