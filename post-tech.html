@@ -349,17 +349,84 @@
     <script>
         let specifications = [];
 
-        function utf8ToBase64(str) {
-            return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, function(match, p1) {
-                return String.fromCharCode('0x' + p1);
-            }));
+        // Base64 encoding function that handles Unicode properly
+        function safeBase64Encode(str) {
+            // First, create a Uint8Array from the string as UTF-8
+            const encoder = new TextEncoder();
+            const data = encoder.encode(str);
+            
+            // Convert the binary data to base64
+            let base64 = '';
+            const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+            let i = 0;
+            
+            // Process every 3 bytes (24 bits) at a time
+            while (i < data.length) {
+                const byte1 = data[i++] || 0;
+                const byte2 = data[i++] || 0;
+                const byte3 = data[i++] || 0;
+                
+                // Convert three bytes into four base64 characters
+                const triplet = (byte1 << 16) | (byte2 << 8) | byte3;
+                
+                base64 += charset[(triplet >> 18) & 0x3F];
+                base64 += charset[(triplet >> 12) & 0x3F];
+                // Add padding if needed
+                base64 += (i > data.length - 2) ? (i > data.length - 1 ? '=' : charset[(triplet >> 6) & 0x3F]) : charset[(triplet >> 6) & 0x3F];
+                base64 += (i > data.length - 3) ? '=' : charset[triplet & 0x3F];
+            }
+            
+            return base64;
         }
         
-        // Helper function to safely decode base64 to Unicode strings
-        function base64ToUtf8(str) {
-            return decodeURIComponent(atob(str).split('').map(function(c) {
-                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-            }).join(''));
+        // Base64 decoding function that handles Unicode properly
+        function safeBase64Decode(base64) {
+            // First replace any non-base64 characters and fix padding
+            base64 = base64.replace(/[^A-Za-z0-9\+\/]/g, '');
+            
+            // Calculate padding
+            const padding = base64.length % 4;
+            if (padding) {
+                if (padding === 1) {
+                    throw new Error('Invalid base64 input');
+                }
+                base64 += '='.repeat(4 - padding);
+            }
+            
+            // Compute the actual length of the decoded data
+            const length = (base64.length / 4) * 3;
+            let actualLength = length;
+            if (base64.endsWith('==')) actualLength -= 2;
+            else if (base64.endsWith('=')) actualLength -= 1;
+            
+            // Create a Uint8Array to hold the decoded data
+            const bytes = new Uint8Array(actualLength);
+            
+            // Map base64 characters to their values
+            const charset = {};
+            'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'.split('').forEach((c, i) => {
+                charset[c] = i;
+            });
+            
+            // Decode every 4 characters into 3 bytes
+            let byteIndex = 0;
+            for (let i = 0; i < base64.length; i += 4) {
+                // Convert four base64 characters back to 24 bits
+                const sextet1 = charset[base64[i] || 'A'];
+                const sextet2 = charset[base64[i + 1] || 'A'];
+                const sextet3 = charset[base64[i + 2] || 'A'];
+                const sextet4 = charset[base64[i + 3] || 'A'];
+                
+                const triplet = (sextet1 << 18) | (sextet2 << 12) | (sextet3 << 6) | sextet4;
+                
+                if (byteIndex < actualLength) bytes[byteIndex++] = (triplet >> 16) & 0xFF;
+                if (byteIndex < actualLength) bytes[byteIndex++] = (triplet >> 8) & 0xFF;
+                if (byteIndex < actualLength) bytes[byteIndex++] = triplet & 0xFF;
+            }
+            
+            // Convert the bytes to a string
+            const decoder = new TextDecoder();
+            return decoder.decode(bytes);
         }
         
         document.addEventListener('DOMContentLoaded', function() {
@@ -549,7 +616,7 @@
                     if (gadgetsResponse.status === 200) {
                         const gadgetsData = await gadgetsResponse.json();
                         // Use the safe decoder
-                        const gadgetsContent = JSON.parse(base64ToUtf8(gadgetsData.content));
+                        const gadgetsContent = JSON.parse(safeBase64Decode(gadgetsData.content));
                         gadgetsCount = Array.isArray(gadgetsContent) ? gadgetsContent.length : 1;
                         
                         if (Array.isArray(gadgetsContent)) {
@@ -663,7 +730,7 @@
                             const gadgetsFileData = await gadgetsResponse.json();
                             gadgetsSha = gadgetsFileData.sha;
                             // Use the safe decoder
-                            gadgetsContent = JSON.parse(base64ToUtf8(gadgetsFileData.content));
+                            gadgetsContent = JSON.parse(safeBase64Decode(gadgetsFileData.content));
                             
                             if (!Array.isArray(gadgetsContent)) {
                                 gadgetsContent = [gadgetsContent];
@@ -678,7 +745,7 @@
                     const gadgetsPayload = {
                         message: `Add new gadget: ${gadgetData.name}`,
                         // Use the safe encoder
-                        content: utf8ToBase64(JSON.stringify(gadgetsContent, null, 2)),
+                        content: safeBase64Encode(JSON.stringify(gadgetsContent, null, 2)),
                         branch: branchName
                     };
                     
@@ -719,7 +786,7 @@
                             const descriptionsFileData = await descriptionsResponse.json();
                             descriptionsSha = descriptionsFileData.sha;
                             // Use the safe decoder
-                            descriptionsContent = JSON.parse(base64ToUtf8(descriptionsFileData.content));
+                            descriptionsContent = JSON.parse(safeBase64Decode(descriptionsFileData.content));
                             
                             if (!Array.isArray(descriptionsContent)) {
                                 descriptionsContent = [descriptionsContent];
@@ -734,7 +801,7 @@
                     const descriptionsPayload = {
                         message: `Add description for gadget: ${gadgetData.name}`,
                         // Use the safe encoder
-                        content: utf8ToBase64(JSON.stringify(descriptionsContent, null, 2)),
+                        content: safeBase64Encode(JSON.stringify(descriptionsContent, null, 2)),
                         branch: branchName
                     };
                     
