@@ -1,0 +1,1097 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Application Guide Management System</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .container {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        h1, h2, h3 {
+            color: #24292e;
+            margin-bottom: 24px;
+        }
+        .form-group {
+            margin-bottom: 16px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        input, select, textarea {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+        button {
+            background-color: #2ea44f;
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 8px;
+            margin-right: 8px;
+        }
+        button:hover {
+            background-color: #2c974b;
+        }
+        .status {
+            margin-top: 20px;
+            padding: 16px;
+            border-radius: 4px;
+            display: none;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+        }
+        .warning {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        #responseArea {
+            margin-top: 20px;
+            background-color: #f6f8fa;
+            padding: 16px;
+            border-radius: 4px;
+            display: none;
+            white-space: pre-wrap;
+            font-family: monospace;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .id-info {
+            background-color: #e9ecef;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 16px;
+            display: none;
+        }
+        .id-info strong {
+            font-weight: 600;
+        }
+        .load-button {
+            background-color: #0366d6;
+            margin-bottom: 16px;
+        }
+        .load-button:hover {
+            background-color: #0358b8;
+        }
+        .logout-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background-color: #d73a49;
+            padding: 8px 12px;
+        }
+        .logout-btn:hover {
+            background-color: #c53030;
+        }
+        #imageUploadArea {
+            display: none;
+            margin-top: 16px;
+            padding: 16px;
+            background-color: #fff3cd;
+            border-radius: 4px;
+        }
+        #imageUploadForm {
+            margin-top: 12px;
+        }
+        .check-image-button {
+            background-color: #6c757d;
+            margin-left: 8px;
+        }
+        .check-image-button:hover {
+            background-color: #5a6268;
+        }
+        .image-input-wrapper {
+            display: flex;
+            align-items: center;
+        }
+        #imagePreview {
+            max-width: 150px;
+            max-height: 150px;
+            margin-top: 10px;
+            display: none;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid #ddd;
+            margin-bottom: 20px;
+        }
+        .tab {
+            padding: 10px 16px;
+            cursor: pointer;
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
+            border-bottom: none;
+            margin-right: 2px;
+        }
+        .tab.active {
+            background-color: white;
+            border-bottom: 1px solid white;
+            margin-bottom: -1px;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .steps-container {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 16px;
+            margin-bottom: 20px;
+            background-color: white;
+        }
+        .step-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .step-body {
+            margin-bottom: 10px;
+        }
+        .step-actions {
+            text-align: right;
+        }
+        .remove-step {
+            background-color: #dc3545;
+            padding: 5px 10px;
+            font-size: 12px;
+        }
+        .remove-step:hover {
+            background-color: #c82333;
+        }
+        .add-step {
+            background-color: #007bff;
+        }
+        .add-step:hover {
+            background-color: #0056b3;
+        }
+        .move-step {
+            background-color: #6c757d;
+            padding: 5px 10px;
+            font-size: 12px;
+            margin-right: 5px;
+        }
+        .move-step:hover {
+            background-color: #5a6268;
+        }
+        .rich-editor-toolbar {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 5px;
+            flex-wrap: wrap;
+        }
+        .rich-editor-btn {
+            background-color: #f0f0f0;
+            color: #333;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            padding: 3px 8px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .rich-editor-btn:hover {
+            background-color: #e0e0e0;
+        }
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .date-picker {
+            width: 100%;
+        }
+        .existing-apps {
+            margin-top: 20px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: white;
+            max-height: 300px;
+            overflow-y: auto;
+            display: none;
+        }
+        .app-item {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+        }
+        .app-item:hover {
+            background-color: #f5f5f5;
+        }
+        .preview-html {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            margin-top: 5px;
+            background-color: white;
+            min-height: 100px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        @media (max-width: 768px) {
+            .two-column {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <button id="logoutBtn" class="logout-btn">Logout</button>
+    <div id="status" class="status"></div>
+    <div id="responseArea"></div>
+    
+    <div class="container">
+        <h1>Application Guide Management System</h1>
+        
+        <div class="form-group">
+            <label for="repoOwner">Repository Owner (Username)</label>
+            <input type="text" id="repoOwner" placeholder="e.g., yourusername" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="repoName">Repository Name</label>
+            <input type="text" id="repoName" placeholder="e.g., my-repository" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="branchName">Branch Name</label>
+            <input type="text" id="branchName" value="main" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="token">GitHub Personal Access Token (with repo scope)</label>
+            <input type="password" id="token" placeholder="ghp_xxxxxxxxxxxx" required>
+            <small>Token will not be stored and is only used for this request.</small>
+        </div>
+        
+        <button id="loadDataBtn" class="load-button">Load Existing Data</button>
+        
+        <div id="idInfo" class="id-info">
+            <p>Last application ID: <strong id="lastAppId">None</strong></p>
+            <p>Suggested next ID: <strong id="nextAppId">1</strong></p>
+        </div>
+        
+        <div id="existingApps" class="existing-apps">
+            <h3 style="padding: 10px;">Existing Applications</h3>
+            <div id="appsList"></div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('basic')">Basic Info</div>
+            <div class="tab" onclick="switchTab('steps')">Guide Steps</div>
+        </div>
+
+        <div id="basic-tab" class="tab-content active">
+            <h2>Basic Application Information</h2>
+            
+            <div class="two-column">
+                <div>
+                    <div class="form-group">
+                        <label for="id">ID</label>
+                        <input type="text" id="id" placeholder="e.g., 1" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="title">Title</label>
+                        <input type="text" id="title" placeholder="e.g., How to Apply for a Student Visa" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="category">Category</label>
+                        <select id="category" required>
+                            <option value="">Select category</option>
+                            <option value="Immigration">Immigration</option>
+                            <option value="Education">Education</option>
+                            <option value="Employment">Employment</option>
+                            <option value="Healthcare">Healthcare</option>
+                            <option value="Financial">Financial</option>
+                            <option value="Government">Government</option>
+                            <option value="Legal">Legal</option>
+                            <option value="Travel">Travel</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div>
+                    <div class="form-group">
+                        <label for="lastUpdated">Last Updated</label>
+                        <input type="date" id="lastUpdated" class="date-picker" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="description">Description</label>
+                        <textarea id="description" placeholder="A brief description of this application guide" required></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="steps-tab" class="tab-content">
+            <h2>Application Guide Steps</h2>
+            <p>Add steps to guide users through the application process. Each step should include a title, description, and optional image.</p>
+            
+            <div id="stepsContainer">
+                <!-- Steps will be added dynamically -->
+            </div>
+            
+            <button type="button" class="add-step" onclick="addStep()">Add Step</button>
+        </div>
+
+        <button id="submitBtn">Submit to GitHub</button>
+    </div>
+
+    <script>
+        // Global variables
+        let steps = [];
+        let applications = [];
+        let currentAppId = null;
+        
+        // Helper function to format date as YYYY-MM-DD
+        function formatDate(date) {
+            const d = new Date(date);
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+        
+        // Helper function to format date for display
+        function formatDateForDisplay(dateStr) {
+            const d = new Date(dateStr);
+            if (isNaN(d.getTime())) return dateStr; // Return original if invalid
+            
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+        
+        // Switch between tabs
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.style.display = 'none');
+            
+            if (tabName === 'basic') {
+                document.querySelector('.tab:nth-child(1)').classList.add('active');
+                document.getElementById('basic-tab').style.display = 'block';
+            } else if (tabName === 'steps') {
+                document.querySelector('.tab:nth-child(2)').classList.add('active');
+                document.getElementById('steps-tab').style.display = 'block';
+            }
+        }
+        
+        // Add a step to the application guide
+        function addStep(step = null) {
+            const stepId = steps.length;
+            
+            // Create default step if none provided
+            if (!step) {
+                step = {
+                    title: '',
+                    description: '',
+                    image: ''
+                };
+            }
+            
+            steps.push(step);
+            
+            const stepsContainer = document.getElementById('stepsContainer');
+            const stepDiv = document.createElement('div');
+            stepDiv.className = 'steps-container';
+            stepDiv.dataset.stepId = stepId;
+            
+            stepDiv.innerHTML = `
+                <div class="step-header">
+                    <h3>Step ${stepId + 1}</h3>
+                    <div>
+                        ${stepId > 0 ? `<button type="button" class="move-step" onclick="moveStep(${stepId}, -1)">Move Up</button>` : ''}
+                        ${stepId < steps.length - 1 ? `<button type="button" class="move-step" onclick="moveStep(${stepId}, 1)">Move Down</button>` : ''}
+                        <button type="button" class="remove-step" onclick="removeStep(${stepId})">Remove Step</button>
+                    </div>
+                </div>
+                
+                <div class="step-body">
+                    <div class="form-group">
+                        <label for="step-title-${stepId}">Step Title</label>
+                        <input type="text" id="step-title-${stepId}" value="${step.title}" placeholder="e.g., Gather Required Documents" onchange="updateStep(${stepId}, 'title', this.value)">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="step-description-${stepId}">Step Description (HTML enabled)</label>
+                        <div class="rich-editor-toolbar">
+                            <button type="button" class="rich-editor-btn" onClick="insertHTML(${stepId}, '<p>', '</p>')">Paragraph</button>
+                            <button type="button" class="rich-editor-btn" onClick="insertHTML(${stepId}, '<h4>', '</h4>')">Heading</button>
+                            <button type="button" class="rich-editor-btn" onClick="insertHTML(${stepId}, '<ul><li>', '</li></ul>')">List</button>
+                            <button type="button" class="rich-editor-btn" onClick="insertHTML(${stepId}, '<li>', '</li>')">List Item</button>
+                            <button type="button" class="rich-editor-btn" onClick="insertHTML(${stepId}, '<strong>', '</strong>')">Bold</button>
+                            <button type="button" class="rich-editor-btn" onClick="insertHTML(${stepId}, '<em>', '</em>')">Italic</button>
+                        </div>
+                        <textarea id="step-description-${stepId}" placeholder="Describe this step in detail" onchange="updateStep(${stepId}, 'description', this.value)">${step.description}</textarea>
+                        <button type="button" onclick="previewHTML(${stepId})">Preview HTML</button>
+                        <div id="preview-${stepId}" class="preview-html" style="display: none;"></div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="step-image-${stepId}">Step Image Path</label>
+                        <div class="image-input-wrapper">
+                            <input type="text" id="step-image-${stepId}" value="${step.image}" placeholder="e.g., images/visa-documents.jpg" onchange="updateStep(${stepId}, 'image', this.value)">
+                            <button type="button" class="check-image-button" onclick="checkImageExists(${stepId})">Check Image</button>
+                        </div>
+                        <small>Image should be in the repository's images folder.</small>
+                        <img id="image-preview-${stepId}" class="imagePreview" alt="Image Preview" style="display: none; max-width: 150px; max-height: 150px; margin-top: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                    </div>
+                    
+                    <div id="image-upload-area-${stepId}" style="display: none; margin-top: 16px; padding: 16px; background-color: #fff3cd; border-radius: 4px;">
+                        <h3>Image Not Found</h3>
+                        <p>The specified image does not exist in the repository. Please upload it:</p>
+                        <form id="image-upload-form-${stepId}">
+                            <input type="file" id="image-file-${stepId}" accept="image/*">
+                            <button type="button" onclick="uploadImage(${stepId})">Upload Image</button>
+                        </form>
+                    </div>
+                </div>
+            `;
+            
+            stepsContainer.appendChild(stepDiv);
+            updateStepNumbers();
+        }
+        
+        // Update step numbers
+        function updateStepNumbers() {
+            const stepContainers = document.querySelectorAll('.steps-container');
+            stepContainers.forEach((container, index) => {
+                const header = container.querySelector('.step-header h3');
+                header.textContent = `Step ${index + 1}`;
+                
+                // Update move buttons
+                const moveButtons = container.querySelector('.step-header div');
+                moveButtons.innerHTML = `
+                    ${index > 0 ? `<button type="button" class="move-step" onclick="moveStep(${container.dataset.stepId}, -1)">Move Up</button>` : ''}
+                    ${index < stepContainers.length - 1 ? `<button type="button" class="move-step" onclick="moveStep(${container.dataset.stepId}, 1)">Move Down</button>` : ''}
+                    <button type="button" class="remove-step" onclick="removeStep(${container.dataset.stepId})">Remove Step</button>
+                `;
+            });
+        }
+        
+        // Update step value
+        function updateStep(id, field, value) {
+            if (steps[id]) {
+                steps[id][field] = value;
+            }
+        }
+        
+        // Remove step
+        function removeStep(id) {
+            if (confirm(`Are you sure you want to remove Step ${parseInt(id) + 1}?`)) {
+                steps.splice(id, 1);
+                
+                // Remove step from DOM
+                const stepDiv = document.querySelector(`.steps-container[data-step-id="${id}"]`);
+                if (stepDiv) {
+                    stepDiv.remove();
+                }
+                
+                // Update step IDs and renumber
+                const stepContainers = document.querySelectorAll('.steps-container');
+                stepContainers.forEach((container, index) => {
+                    container.dataset.stepId = index;
+                    
+                    // Update event handlers and IDs for inputs
+                    const title = container.querySelector('input[id^="step-title-"]');
+                    const description = container.querySelector('textarea[id^="step-description-"]');
+                    const image = container.querySelector('input[id^="step-image-"]');
+                    
+                    title.id = `step-title-${index}`;
+                    title.setAttribute('onchange', `updateStep(${index}, 'title', this.value)`);
+                    
+                    description.id = `step-description-${index}`;
+                    description.setAttribute('onchange', `updateStep(${index}, 'description', this.value)`);
+                    
+                    image.id = `step-image-${index}`;
+                    image.setAttribute('onchange', `updateStep(${index}, 'image', this.value)`);
+                    
+                    // Update preview button
+                    const previewBtn = container.querySelector('button[onclick^="previewHTML"]');
+                    previewBtn.setAttribute('onclick', `previewHTML(${index})`);
+                    
+                    // Update preview div
+                    const previewDiv = container.querySelector('div[id^="preview-"]');
+                    previewDiv.id = `preview-${index}`;
+                    
+                    // Update rich editor buttons
+                    const richEditorBtns = container.querySelectorAll('.rich-editor-btn');
+                    richEditorBtns.forEach(btn => {
+                        const onClick = btn.getAttribute('onClick').replace(/insertHTML\(\d+,/, `insertHTML(${index},`);
+                        btn.setAttribute('onClick', onClick);
+                    });
+                    
+                    // Update check image button
+                    const checkImgBtn = container.querySelector('button[onclick^="checkImageExists"]');
+                    checkImgBtn.setAttribute('onclick', `checkImageExists(${index})`);
+                    
+                    // Update image preview
+                    const imgPreview = container.querySelector('img[id^="image-preview-"]');
+                    imgPreview.id = `image-preview-${index}`;
+                    
+                    // Update image upload area
+                    const uploadArea = container.querySelector('div[id^="image-upload-area-"]');
+                    uploadArea.id = `image-upload-area-${index}`;
+                    
+                    // Update image file input
+                    const fileInput = container.querySelector('input[id^="image-file-"]');
+                    fileInput.id = `image-file-${index}`;
+                    
+                    // Update upload button
+                    const uploadBtn = container.querySelector('button[onclick^="uploadImage"]');
+                    uploadBtn.setAttribute('onclick', `uploadImage(${index})`);
+                });
+                
+                updateStepNumbers();
+            }
+        }
+        
+        // Move step up or down
+        function moveStep(id, direction) {
+            const newPos = parseInt(id) + direction;
+            
+            if (newPos >= 0 && newPos < steps.length) {
+                // Swap steps in array
+                [steps[id], steps[newPos]] = [steps[newPos], steps[id]];
+                
+                // Redraw all steps
+                document.getElementById('stepsContainer').innerHTML = '';
+                steps.forEach(step => addStep(step));
+            }
+        }
+        
+        // Insert HTML tags into textarea
+        function insertHTML(stepId, startTag, endTag) {
+            const textarea = document.getElementById(`step-description-${stepId}`);
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const selectedText = textarea.value.substring(start, end);
+            const newText = startTag + selectedText + endTag;
+            
+            textarea.value = textarea.value.substring(0, start) + newText + textarea.value.substring(end);
+            updateStep(stepId, 'description', textarea.value);
+            
+            // Set cursor position after inserted text
+            textarea.focus();
+            textarea.selectionStart = start + newText.length;
+            textarea.selectionEnd = start + newText.length;
+        }
+        
+        // Preview HTML content
+        function previewHTML(stepId) {
+            const textarea = document.getElementById(`step-description-${stepId}`);
+            const previewDiv = document.getElementById(`preview-${stepId}`);
+            
+            if (previewDiv.style.display === 'none') {
+                previewDiv.innerHTML = textarea.value;
+                previewDiv.style.display = 'block';
+            } else {
+                previewDiv.style.display = 'none';
+            }
+        }
+        
+        // Improved Base64 functions with better error handling
+        function encodeBase64(str) {
+            try {
+                // First encode the string as UTF-8
+                const utf8Encoder = new TextEncoder();
+                const utf8Bytes = utf8Encoder.encode(str);
+                
+                // Convert UTF-8 bytes to binary string (required for btoa)
+                let binaryString = '';
+                utf8Bytes.forEach(byte => {
+                    binaryString += String.fromCharCode(byte);
+                });
+                
+                // Use browser's btoa function for base64 encoding
+                return btoa(binaryString);
+            } catch (e) {
+                console.error("Base64 encoding error:", e);
+                showStatus("Error encoding data to Base64. Please check for invalid characters.", "error");
+                throw new Error("Base64 encoding failed: " + e.message);
+            }
+        }
+        
+        function decodeBase64(base64) {
+            try {
+                if (!base64 || typeof base64 !== 'string') {
+                    throw new Error("Invalid input: not a string");
+                }
+                
+                // Remove whitespace and any non-base64 characters
+                base64 = base64.replace(/[\r\n\t\s]/g, '').replace(/^[^,]*,/, '');
+                
+                // Add padding if necessary
+                while (base64.length % 4 !== 0) {
+                    base64 += '=';
+                }
+                
+                // First use browser's atob to get binary string
+                const binaryString = atob(base64);
+                
+                // Convert binary string to UTF-8 array
+                const bytes = new Uint8Array(binaryString.length);
+                for (let i = 0; i < binaryString.length; i++) {
+                    bytes[i] = binaryString.charCodeAt(i);
+                }
+                
+                // Decode UTF-8 array to string
+                const decoder = new TextDecoder('utf-8');
+                return decoder.decode(bytes);
+            } catch (e) {
+                console.error("Base64 decoding error:", e);
+                showStatus("Error decoding Base64 data. The data may be corrupted.", "error");
+                throw new Error("Base64 decoding failed: " + e.message);
+            }
+        }
+        
+        // Show status messages
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = message;
+            statusDiv.className = 'status ' + type;
+            statusDiv.style.display = 'block';
+            
+            // Auto-hide success messages after 5 seconds
+            if (type === 'success') {
+                setTimeout(() => {
+                    statusDiv.style.display = 'none';
+                }, 5000);
+            }
+        }
+        
+        // Clear form
+        function clearForm() {
+            document.getElementById('id').value = '';
+            document.getElementById('title').value = '';
+            document.getElementById('category').selectedIndex = 0;
+            document.getElementById('description').value = '';
+            document.getElementById('lastUpdated').value = formatDate(new Date());
+            
+            // Clear steps
+            steps = [];
+            document.getElementById('stepsContainer').innerHTML = '';
+            
+            // Reset current app ID
+            currentAppId = null;
+        }
+        
+        // Load existing data from GitHub repository
+        async function loadExistingData() {
+            const repoOwner = document.getElementById('repoOwner').value;
+            const repoName = document.getElementById('repoName').value;
+            const branchName = document.getElementById('branchName').value;
+            const token = document.getElementById('token').value;
+            
+            if (!repoOwner || !repoName || !branchName || !token) {
+                showStatus('Please fill in all GitHub repository fields.', 'error');
+                return;
+            }
+            
+            showStatus('Loading existing data...', 'info');
+            
+            try {
+                // Try to load applications.json
+                const appsResponse = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/applications.json?ref=${branchName}`, {
+                    headers: {
+                        'Authorization': `token ${token}`,
+                        'Accept': 'application/vnd.github.v3+json'
+                    }
+                });
+                
+                let highestId = 0;
+                applications = [];
+                
+                if (appsResponse.status === 200) {
+                    const appsData = await appsResponse.json();
+                    
+                    try {
+                        const content = appsData.content.replace(/\\n/g, '');
+                        applications = JSON.parse(decodeBase64(content));
+                        
+                        if (!Array.isArray(applications)) {
+                            applications = [applications];
+                        }
+                        
+                        applications.forEach(app => {
+                            const appId = parseInt(app.id, 10);
+                            if (!isNaN(appId) && appId > highestId) {
+                                highestId = appId;
+                            }
+                        });
+                        
+                        // Populate existing applications list
+                        const appsList = document.getElementById('appsList');
+                        appsList.innerHTML = '';
+                        
+                        applications.sort((a, b) => parseInt(a.id) - parseInt(b.id));
+        
+        applications.forEach(app => {
+            const appItem = document.createElement('div');
+            appItem.className = 'app-item';
+            appItem.dataset.id = app.id;
+            appItem.textContent = `#${app.id}: ${app.title} (${app.category})`;
+            appItem.addEventListener('click', () => loadApplicationData(app));
+            appsList.appendChild(appItem);
+        });
+        
+        document.getElementById('existingApps').style.display = 'block';
+                        
+    } catch (e) {
+        console.error("Error parsing applications.json:", e);
+        showStatus("Error parsing applications.json. The file may be corrupted.", "error");
+        applications = [];
+    }
+} else if (appsResponse.status === 404) {
+    showStatus("No existing applications.json file found. A new one will be created.", "info");
+} else {
+    throw new Error(`Failed to fetch applications.json: ${appsResponse.status} ${appsResponse.statusText}`);
+}
+
+// Update ID info
+document.getElementById('lastAppId').textContent = highestId > 0 ? highestId : 'None';
+document.getElementById('nextAppId').textContent = highestId + 1;
+document.getElementById('idInfo').style.display = 'block';
+document.getElementById('id').value = highestId + 1;
+
+// Set default date
+document.getElementById('lastUpdated').value = formatDate(new Date());
+
+showStatus('Data loaded successfully.', 'success');
+} catch (error) {
+    console.error("Error loading data:", error);
+    showStatus(`Error loading data: ${error.message}`, 'error');
+}
+}
+
+// Load application data into form
+function loadApplicationData(app) {
+    currentAppId = app.id;
+    
+    // Fill basic info
+    document.getElementById('id').value = app.id;
+    document.getElementById('title').value = app.title || '';
+    
+    const categorySelect = document.getElementById('category');
+    for (let i = 0; i < categorySelect.options.length; i++) {
+        if (categorySelect.options[i].value === app.category) {
+            categorySelect.selectedIndex = i;
+            break;
+        }
+    }
+    
+    document.getElementById('description').value = app.description || '';
+    document.getElementById('lastUpdated').value = formatDateForDisplay(app.lastUpdated) || formatDate(new Date());
+    
+    // Fill steps
+    steps = [];
+    document.getElementById('stepsContainer').innerHTML = '';
+    
+    if (app.steps && Array.isArray(app.steps)) {
+        app.steps.forEach(step => addStep(step));
+    }
+    
+    // Switch to basic tab
+    switchTab('basic');
+    
+    showStatus(`Loaded application #${app.id}: ${app.title}`, 'success');
+}
+
+// Check if image exists in repository
+async function checkImageExists(stepId) {
+    const imagePath = document.getElementById(`step-image-${stepId}`).value.trim();
+    if (!imagePath) {
+        alert('Please enter an image path first.');
+        return;
+    }
+    
+    const repoOwner = document.getElementById('repoOwner').value;
+    const repoName = document.getElementById('repoName').value;
+    const branchName = document.getElementById('branchName').value;
+    const token = document.getElementById('token').value;
+    
+    try {
+        const response = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/${imagePath}?ref=${branchName}`, {
+            headers: {
+                'Authorization': `token ${token}`,
+                'Accept': 'application/vnd.github.v3+json'
+            }
+        });
+        
+        if (response.status === 200) {
+            const data = await response.json();
+            
+            // Display image preview
+            const imagePreview = document.getElementById(`image-preview-${stepId}`);
+            imagePreview.src = `data:image/png;base64,${data.content.replace(/\n/g, '')}`;
+            imagePreview.style.display = 'block';
+            
+            // Hide upload area
+            document.getElementById(`image-upload-area-${stepId}`).style.display = 'none';
+            
+            showStatus('Image found in repository.', 'success');
+        } else if (response.status === 404) {
+            // Show upload area
+            document.getElementById(`image-upload-area-${stepId}`).style.display = 'block';
+            
+            // Hide preview
+            document.getElementById(`image-preview-${stepId}`).style.display = 'none';
+            
+            showStatus('Image not found in repository. You can upload it using the form below.', 'warning');
+        } else {
+            throw new Error(`Failed to check image: ${response.status} ${response.statusText}`);
+        }
+    } catch (error) {
+        console.error("Error checking image:", error);
+        showStatus(`Error checking image: ${error.message}`, 'error');
+    }
+}
+
+// Upload image to repository
+async function uploadImage(stepId) {
+    const fileInput = document.getElementById(`image-file-${stepId}`);
+    
+    if (!fileInput.files || fileInput.files.length === 0) {
+        alert('Please select a file to upload.');
+        return;
+    }
+    
+    const file = fileInput.files[0];
+    const imagePath = document.getElementById(`step-image-${stepId}`).value.trim();
+    
+    if (!imagePath) {
+        alert('Please enter an image path first.');
+        return;
+    }
+    
+    const repoOwner = document.getElementById('repoOwner').value;
+    const repoName = document.getElementById('repoName').value;
+    const branchName = document.getElementById('branchName').value;
+    const token = document.getElementById('token').value;
+    
+    showStatus('Uploading image...', 'info');
+    
+    try {
+        // Read file as data URL
+        const reader = new FileReader();
+        
+        reader.onload = async (e) => {
+            try {
+                const base64Data = e.target.result.split(',')[1];
+                
+                // Upload file to GitHub
+                const response = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/${imagePath}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `token ${token}`,
+                        'Accept': 'application/vnd.github.v3+json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        message: `Add image for application step ${stepId + 1}`,
+                        content: base64Data,
+                        branch: branchName
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.status === 201 || response.status === 200) {
+                    // Display image preview
+                    const imagePreview = document.getElementById(`image-preview-${stepId}`);
+                    imagePreview.src = e.target.result;
+                    imagePreview.style.display = 'block';
+                    
+                    // Hide upload area
+                    document.getElementById(`image-upload-area-${stepId}`).style.display = 'none';
+                    
+                    showStatus('Image uploaded successfully.', 'success');
+                } else {
+                    throw new Error(data.message || 'Failed to upload image.');
+                }
+            } catch (error) {
+                console.error("Error uploading image:", error);
+                showStatus(`Error uploading image: ${error.message}`, 'error');
+            }
+        };
+        
+        reader.readAsDataURL(file);
+    } catch (error) {
+        console.error("Error uploading image:", error);
+        showStatus(`Error uploading image: ${error.message}`, 'error');
+    }
+}
+
+// Submit application data to GitHub
+async function submitToGitHub() {
+    const id = document.getElementById('id').value.trim();
+    const title = document.getElementById('title').value.trim();
+    const category = document.getElementById('category').value;
+    const description = document.getElementById('description').value.trim();
+    const lastUpdated = document.getElementById('lastUpdated').value;
+    
+    if (!id || !title || !category || !description || !lastUpdated) {
+        showStatus('Please fill in all required fields.', 'error');
+        return;
+    }
+    
+    const repoOwner = document.getElementById('repoOwner').value;
+    const repoName = document.getElementById('repoName').value;
+    const branchName = document.getElementById('branchName').value;
+    const token = document.getElementById('token').value;
+    
+    if (!repoOwner || !repoName || !branchName || !token) {
+        showStatus('Please fill in all GitHub repository fields.', 'error');
+        return;
+    }
+    
+    showStatus('Submitting application data...', 'info');
+    
+    try {
+        // Create application object
+        const application = {
+            id: id,
+            title: title,
+            category: category,
+            description: description,
+            lastUpdated: lastUpdated,
+            steps: steps
+        };
+        
+        // Update or add to applications array
+        const existingIndex = applications.findIndex(app => app.id === id);
+        
+        if (existingIndex >= 0) {
+            applications[existingIndex] = application;
+        } else {
+            applications.push(application);
+        }
+        
+        // Sort applications by ID
+        applications.sort((a, b) => parseInt(a.id) - parseInt(b.id));
+        
+        // Try to get existing file to get its SHA
+        let sha = null;
+        try {
+            const response = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/applications.json?ref=${branchName}`, {
+                headers: {
+                    'Authorization': `token ${token}`,
+                    'Accept': 'application/vnd.github.v3+json'
+                }
+            });
+            
+            if (response.status === 200) {
+                const data = await response.json();
+                sha = data.sha;
+            }
+        } catch (error) {
+            console.log('No existing applications.json found. Creating new file.');
+        }
+        
+        // Upload applications.json
+        const content = JSON.stringify(applications, null, 2);
+        const base64Content = encodeBase64(content);
+        
+        const uploadData = {
+            message: existingIndex >= 0 ? `Update application #${id}` : `Add application #${id}`,
+            content: base64Content,
+            branch: branchName
+        };
+        
+        if (sha) {
+            uploadData.sha = sha;
+        }
+        
+        const uploadResponse = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/applications.json`, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `token ${token}`,
+                'Accept': 'application/vnd.github.v3+json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(uploadData)
+        });
+        
+        if (uploadResponse.status === 200 || uploadResponse.status === 201) {
+            showStatus('Application data submitted successfully.', 'success');
+            
+            // Update UI
+            loadExistingData();
+            clearForm();
+        } else {
+            const data = await uploadResponse.json();
+            throw new Error(data.message || `Failed to upload: ${uploadResponse.status} ${uploadResponse.statusText}`);
+        }
+    } catch (error) {
+        console.error("Error submitting data:", error);
+        showStatus(`Error submitting data: ${error.message}`, 'error');
+    }
+}
+
+// Event listeners
+document.addEventListener('DOMContentLoaded', () => {
+    // Set default date
+    document.getElementById('lastUpdated').value = formatDate(new Date());
+    
+    // Load data button
+    document.getElementById('loadDataBtn').addEventListener('click', loadExistingData);
+    
+    // Submit button
+    document.getElementById('submitBtn').addEventListener('click', submitToGitHub);
+    
+    // Logout button
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+        if (confirm('Are you sure you want to logout? Any unsaved changes will be lost.')) {
+            document.getElementById('token').value = '';
+            document.getElementById('responseArea').style.display = 'none';
+            document.getElementById('existingApps').style.display = 'none';
+            document.getElementById('idInfo').style.display = 'none';
+            clearForm();
+            showStatus('Logged out successfully.', 'success');
+        }
+    });
+});
