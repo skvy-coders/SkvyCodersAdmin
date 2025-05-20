@@ -823,14 +823,14 @@
             throw new Error(`Failed to update gadgets.json: ${gadgetsError.message}`);
         }
 
-        // ✅ Update gadget-description.json (NEW)
-        showStatus('Updating gadget-description.json...', 'info');
+        // ✅ Update gadgets-description.json (NEW)
+        showStatus('Updating gadgets-description.json...', 'info');
 
         let descriptionsContent = [];
         let descriptionsSha = null;
 
         try {
-            const descResponse = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/gadget-description.json?ref=${branchName}`, {
+            const descResponse = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/gadgets-description.json?ref=${branchName}`, {
                 headers: {
                     'Authorization': `token ${token}`,
                     'Accept': 'application/vnd.github.v3+json'
@@ -847,7 +847,7 @@
                 }
             }
         } catch (error) {
-            console.warn('gadget-description.json not found, starting new.');
+            console.warn('gadgets-description.json not found, starting new.');
         }
 
         const descIndex = descriptionsContent.findIndex(d => d.id === descriptionData.id);
@@ -860,7 +860,7 @@
         descriptionsContent.sort((a, b) => a.id - b.id);
 
         const descPayload = {
-            message: `Update gadget-description.json with extended description for ${gadgetData.name}`,
+            message: `Update gadgets-description.json with extended description for ${gadgetData.name}`,
             content: encodeBase64(JSON.stringify(descriptionsContent, null, 2)),
             branch: branchName
         };
@@ -869,7 +869,7 @@
             descPayload.sha = descriptionsSha;
         }
 
-        const descUpdateResponse = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/gadget-description.json`, {
+        const descUpdateResponse = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/gadgets-description.json`, {
             method: 'PUT',
             headers: {
                 'Authorization': `token ${token}`,
@@ -881,7 +881,7 @@
 
         if (!descUpdateResponse.ok) {
             const errorData = await descUpdateResponse.json();
-            throw new Error(`Failed to update gadget-description.json: ${errorData.message}`);
+            throw new Error(`Failed to update gadgets-description.json: ${errorData.message}`);
         }
 
         showStatus(`Successfully added/updated gadget "${gadgetData.name}" to GitHub!`, 'success');
