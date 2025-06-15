@@ -344,6 +344,8 @@
         </div>
     </div>
 
+    <script src="/authorize.js"></script>
+
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const submitBtn = document.getElementById('submitBtn');
@@ -369,11 +371,10 @@
             document.getElementById('postingDate').value = formattedDate;
             
             // Check if user is logged in (you might want to implement your own login system)
-            /* Uncomment this if you have a login system
             if (!localStorage.getItem('loggedIn') && !sessionStorage.getItem('loggedIn')) {
                 window.location.href = 'index.html';
             }
-            */
+            
             
             // Global variables
             let jobsData = [];
@@ -457,6 +458,9 @@
             }
             
             function displayJobs(jobs) {
+
+                switchTab('jobList');
+
                 const container = document.getElementById('jobListContainer');
                 const noJobsMessage = document.getElementById('noJobsMessage');
                 
@@ -466,7 +470,9 @@
                     return;
                 }
                 
-                noJobsMessage.style.display = 'none';
+                if(noJobsMessage) {
+                    noJobsMessage.style.display = 'none';
+                }
                 
                 // Sort jobs by posting date (most recent first)
                 jobs.sort((a, b) => new Date(b.postingDate) - new Date(a.postingDate));
@@ -648,6 +654,7 @@
                 const jsonFileName = document.getElementById('jsonFileName').value;
                 
                 if (!repoOwner || !repoName || !branchName || !token || !jsonFileName) {
+                    console.log('Please fill in all GitHub repository fields.', 'error')
                     showStatus('Please fill in all GitHub repository fields.', 'error');
                     return;
                 }
@@ -660,6 +667,7 @@
                     return;
                 }
                 
+                console.log('Processing job data...', 'info')
                 showStatus('Processing job data...', 'info');
                 
                 try {
@@ -694,15 +702,19 @@
                         
                         if (editIndex !== -1) {
                             existingContent[editIndex] = jobData;
+                            
+                            console.log('Updating job...', 'info')
                             showStatus('Updating job...', 'info');
                         } else {
                             // Job ID not found, add as new
                             existingContent.push(jobData);
+                            console.log('Adding job (edit target not found)...', 'info')
                             showStatus('Adding job (edit target not found)...', 'info');
                         }
                     } else {
                         // Add new job
                         existingContent.push(jobData);
+                        console.log('Adding new job...', 'info')
                         showStatus('Adding new job...', 'info');
                     }
                     
@@ -731,8 +743,10 @@
                     
                     if (updateResponse.status === 200 || updateResponse.status === 201) {
                         if (editMode.value === 'true') {
+                            console.log('Job successfully updated in GitHub!', 'success')
                             showStatus('Job successfully updated in GitHub!', 'success');
                         } else {
+                            console.log('Job successfully added to GitHub!', 'success')
                             showStatus('Job successfully added to GitHub!', 'success');
                         }
                         
@@ -760,6 +774,7 @@
                         throw new Error(updateData.message || 'Failed to update file');
                     }
                 } catch (error) {
+                    console.log(`Error: ${error.message}`, 'error')
                     showStatus(`Error: ${error.message}`, 'error');
                     console.error('Error details:', error);
                 }
